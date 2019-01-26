@@ -124,9 +124,12 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Operating System :: MacOS',
-        'Operating System :: POSIX',
-        'Operating System :: Unix'
+        'Operating System :: OS Independent',
+        'Framework :: Pytest',
+        'Topic :: Software Development :: Testing',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: Software Development :: Testing :: Mocking'
     ],
+    entry_points = {'pytest11': ['unmock = unmock.pytest.plugin']},
     cmdclass={'dist': BuildDistCommand, 'upload': UploadCommand, 'test': TestCommand}
 )
