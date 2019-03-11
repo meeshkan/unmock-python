@@ -1,61 +1,48 @@
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Dict, Any
+from urllib.parse import urlencode
+
+from .utils import json_stringify
+
+UNMOCK_HOST = "api.unmock.io"
+UNMOCK_PORT = 443
 
 class UnmockOptions:
-    def __init__(self, save: Union[bool, List[str]] = False, unmock_host: str = "api.unmock.io", unmock_port = 443,
+    def __init__(self, save: Union[bool, List[str]] = False, unmock_host: str = UNMOCK_HOST, unmock_port = UNMOCK_PORT,
                  use_in_production: bool = False,
-                 logger=None, persistence=None,  # TODO
+                 logger=None, persistence=None,
                  ignore=None, signature: Optional[str] = None, token: Optional[str] = None,
-                 whitelist: Optional[List[Str]] = None):
-        self.logger = logger
-        self.persistence = persistence
+                 whitelist: Optional[List[str]] = None):
+        self.logger = logger  # TODO
+        self.persistence = persistence  # TODO
         self.save = save
         self.unmock_host = unmock_host
         self.unmock_port = unmock_port
         self.use_in_production = use_in_production
-        self.ignore = ignore if ignore is not None else {headers: r"\w*User-Agent\w*"}
+        self.ignore = ignore if ignore is not None else { "headers": "\w*User-Agent\w*" }
         self.signature = signature
         self.token = token
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
+        # Add the unmock host to whitelist:
+        self.whitelist.append(unmock_host)
 
-"""
-export const defaultOptions: IUnmockInternalOptions = {
-  ignore: {headers: "\w*User-Agent\w*"},
-  logger: isNode ?
-    new (__non_webpack_require__("./logger/winston-logger").default)() :
-    new (require("./logger/browser-logger").default)(),
-  persistence: isNode ?
-    new (__non_webpack_require__("./persistence/fs-persistence").default)() :
-    new (require("./persistence/local-storage-persistence").default)(),
-  save: false,
-  unmockHost: "api.unmock.io",
-  unmockPort: "443",
-  useInProduction: false,
-  whitelist: ["127.0.0.1", "127.0.0.0", "localhost"],
-};
+    def is_host_whitelisted(self, host: str):
+        return host in self.whitelist
 
-export interface IUnmockInternalOptions {
-    logger: ILogger;
-    persistence: IPersistence;
-    save: boolean | string[];
-    unmockHost: string;
-    unmockPort: string;
-    useInProduction: boolean;
-    ignore?: any;
-    signature?: string;
-    token?: string;
-    whitelist?: string[];
-}
+    @staticmethod
+    def xy(xy):
+        return "/x/" if xy else "/y/"
 
-export interface IUnmockOptions {
-    logger?: ILogger;
-    persistence?: IPersistence;
-    save?: boolean | string[];
-    unmockHost?: string;
-    unmockPort?: string;
-    ignore?: any;
-    signature?: string;
-    token?: string;
-    whitelist?: string[];
-    useInProduction?: boolean;
-}
-"""
+    def build_path(self, story: Optional[List[str]],  headers: Dict[str, Any], host: Optional[str] = None,
+                   method: Optional[str] = None, path: Optional[str] = None):
+        qs = {
+            "story": json_stringify(story),
+            "path": path or "",
+            "hostname": host or "",
+            "method": method or "",
+            "headers": json_stringify(headers)
+        }
+        if self.ignore is not None:
+            qs["ignore"] = json_stringify(self.ignore)
+        if self.signature is not None:
+            qs["signature"] = self.signature
+        return urlencode(qs)
