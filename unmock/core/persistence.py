@@ -20,10 +20,6 @@ class Persistence(ABC):
         pass
 
     @abstractmethod
-    def save_token(self, token: str) -> None:
-        pass
-
-    @abstractmethod
     def load_headers(self, hash: str) -> Optional[Dict[str, str]]:
         pass
 
@@ -52,7 +48,7 @@ class FSPersistence(Persistence):
 
     @property
     def unmock_dir(self):
-        return HOMEPATH.joinpath(".unmock")
+        return FSPersistence.HOMEPATH.joinpath(".unmock")
 
     @property
     def token_path(self):
@@ -66,7 +62,7 @@ class FSPersistence(Persistence):
     def hash_dir(self):
         return self.unmock_dir.joinpath("save")
 
-    def __outdir(self, hash: str):
+    def __outdir(self, hash: str) -> Path:
         hashdir = self.hash_dir.joinpath(hash)
         hashdir.mkdir(parents=True, exist_ok=True)
         return hashdir
