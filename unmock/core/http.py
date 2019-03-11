@@ -34,6 +34,7 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
 
 
     def unmock_putheader(self: http.client.HTTPConnection, header, *values):
+        print(self.host, hasattr(self, "unmock"), header, values)
         decoded_values = list()
         for v in values:
             try:
@@ -50,11 +51,11 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
 
         elif header == UNMOCK_AUTH:
             self.unmock.unmock_headers["Authorization"] = "".join(decoded_values)
-            # original_putheader(self.unmock, "Authorization", *decoded_values)
+            original_putheader(self.unmock, "Authorization", *decoded_values)
 
         else:
             self.unmock.unmock_headers["headers"][header] = decoded_values
-            # original_putheader(self.unmock, header, *decoded_values)
+            # TODO? original_putheader(self.unmock, header, *decoded_values)
 
     def unmock_end_headers(self: http.client.HTTPConnection, message_body=None, *, encode_chunked=False):
         print("End Headers:", message_body, encode_chunked, self.unmock.unmock_headers)
@@ -64,7 +65,7 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
             original_endheaders(self, message_body, encode_chunked=encode_chunked)
         else:
             print(self.host, "in mocked endheaders")
-            # Build body (query parameters)
+            # TODO: build body (query parameters)?
             # if message_body is not None:
             #     original_putheader(self.unmock, "body", message_body)
             query = unmock_options.build_path(story=story, host=self.host, method=self.unmock.unmock_headers["method"],
@@ -72,30 +73,29 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
                                               path="{path}".format(path=self.unmock.unmock_headers["path"]))
             original_putrequest(self.unmock, method="GET",
                                 url="{fake_path}?{query}".format(fake_path=unmock_options.xy(token), query=query))
-            print("\n")
-            print("{fake_path}?{query}".format(fake_path=unmock_options.xy(token), query=query))
-            print(message_body)
-            print("\n")
-            for k, v in self.unmock.__dict__.items():
-                print(k, ":", v)
-            # original_putheader(self.unmock, "Authorization", self.unmock.unmock_headers.get("Authorization", "").encode())
             # TODO: call to end_reporter for a nice printout
-            # print(body)
             original_endheaders(self.unmock, message_body, encode_chunked=encode_chunked)
+
+    def unmock_get_response(self: http.client.HTTPConnection):
+        if unmock_options.is_host_whitelisted(self.host):
+            return original_getresponse(self)
+        elif hasattr(self, "unmock"):
+            return original_getresponse(self.unmock)
 
     putrequest_patcher = mock.patch("http.client.HTTPConnection.putrequest", unmock_putrequest)
     putheader_patcher = mock.patch("http.client.HTTPConnection.putheader", unmock_putheader)
     endheaders_patcher = mock.patch("http.client.HTTPConnection.endheaders", unmock_end_headers)
+    getrespnse_patcher = mock.patch("http.client.HTTPConnection.getresponse", unmock_get_response)
 
     original_putrequest = putrequest_patcher.get_original()[0]
     original_putheader = putheader_patcher.get_original()[0]
     original_endheaders = endheaders_patcher.get_original()[0]
+    original_getresponse = getrespnse_patcher.get_original()[0]
 
     putheader_patcher.start()
     endheaders_patcher.start()
     putrequest_patcher.start()
+    getrespnse_patcher.start()
 
 def reset():
     pass
-    # http.client.HTTPConnection.putrequest = HTTPConnectionPutRequest
-    # http.client.HTTPSConnection.putrequest = HTTPConnectionPutRequest
