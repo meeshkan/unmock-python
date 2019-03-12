@@ -1,14 +1,13 @@
 from typing import Optional, List
 import http.client
 from urllib.parse import urlsplit, SplitResult
-import socket
-from unittest import mock
 
 from .options import UnmockOptions
-from .utils import end_reporter
+from .utils import end_reporter, Patchers
 
 # Backup:
 UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
+PATCHERS = Patchers()
 
 def parse_url(url) -> SplitResult:
     parsed_url = urlsplit(url)
@@ -17,6 +16,7 @@ def parse_url(url) -> SplitResult:
     return parsed_url
 
 def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None, token: Optional[str] = None):
+    global PATCHERS
     story = story or list()
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
@@ -77,20 +77,12 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
             # TODO: call to end_reporter for a nice printout
             return original_getresponse(self.unmock)
 
-    putrequest_patcher = mock.patch("http.client.HTTPConnection.putrequest", unmock_putrequest)
-    putheader_patcher = mock.patch("http.client.HTTPConnection.putheader", unmock_putheader)
-    endheaders_patcher = mock.patch("http.client.HTTPConnection.endheaders", unmock_end_headers)
-    getrespnse_patcher = mock.patch("http.client.HTTPConnection.getresponse", unmock_get_response)
-
-    original_putrequest = putrequest_patcher.get_original()[0]
-    original_putheader = putheader_patcher.get_original()[0]
-    original_endheaders = endheaders_patcher.get_original()[0]
-    original_getresponse = getrespnse_patcher.get_original()[0]
-
-    putheader_patcher.start()
-    endheaders_patcher.start()
-    putrequest_patcher.start()
-    getrespnse_patcher.start()
+    original_putrequest = PATCHERS.patch("http.client.HTTPConnection.putrequest", unmock_putrequest)
+    original_putheader = PATCHERS.patch("http.client.HTTPConnection.putheader", unmock_putheader)
+    original_endheaders = PATCHERS.patch("http.client.HTTPConnection.endheaders", unmock_end_headers)
+    original_getresponse = PATCHERS.patch("http.client.HTTPConnection.getresponse", unmock_get_response)
+    PATCHERS.start()
 
 def reset():
-    pass
+    global PATCHERS
+    PATCHERS.stop()
