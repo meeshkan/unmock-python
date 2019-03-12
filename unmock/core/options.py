@@ -4,6 +4,8 @@ from http.client import HTTPResponse
 import logging
 import json
 
+__all__ = ["UnmockOptions"]
+
 UNMOCK_HOST = "api.unmock.io"
 UNMOCK_PORT = 443
 
@@ -34,15 +36,15 @@ class UnmockOptions:
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
 
-    def is_host_whitelisted(self, host: str):
+    def _is_host_whitelisted(self, host: str):
         return host in self.whitelist
 
     @staticmethod
-    def xy(xy):
+    def _xy(xy):
         return "/x/" if xy else "/y/"
 
-    def build_path(self, story: Optional[List[str]],  headers: Dict[str, Any], host: Optional[str] = None,
-                   method: Optional[str] = None, path: Optional[str] = None):
+    def _build_query(self, story: Optional[List[str]],  headers: Dict[str, Any], host: Optional[str] = None,
+                     method: Optional[str] = None, path: Optional[str] = None):
         qs = {
             "story": json.dumps(story),
             "path": path or "",
@@ -56,7 +58,7 @@ class UnmockOptions:
             qs["signature"] = self.signature
         return urlencode(qs)
 
-    def end_reporter(self, res: HTTPResponse, data: Any, host: str, method: str, path: str, story: List[str], xy: str):
+    def _end_reporter(self, res: HTTPResponse, data: Any, host: str, method: str, path: str, story: List[str], xy: str):
         headers = res.headers
         unmock_hash = headers["unmock-hash"]
         if unmock_hash not in story:
