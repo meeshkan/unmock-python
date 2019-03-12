@@ -15,11 +15,27 @@ STORIES = list()
 def parse_url(url) -> SplitResult:
     parsed_url = urlsplit(url)
     if parsed_url.scheme == "" or parsed_url.netloc == "":
-        return urlsplit("http://{url}".format(url=url))
+        # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
+        return urlsplit("https://{url}".format(url=url))
     return parsed_url
 
-def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None, token: Optional[str] = None):
-    """Entry point to mock the standard http client. Both `urllib` and `requests` library use the
+def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[List[str]] = None,
+               token: Optional[str] = None):
+    """
+    Initialize the unmock library for capturing API calls.
+
+    :param unmock_options: An Optional object allowing customization of how unmock works.
+    :type unmock_options UnmockOptions
+    :param story: An optional list of unmock stories to initialize the state. These represent previous calls to unmock
+        and make unmock stateful.
+    :type story List[str]
+    :param token: An optional unmock token identifying your account.
+    :type token str
+    """
+
+    # TODO - `token` is also used in UnmockOptions...?
+    """
+    Entry point to mock the standard http client. Both `urllib` and `requests` library use the
     `http.client.HTTPConnection`, so mocking it should support their use aswell.
 
     We mock the "low level" API (instead of the `request` method, we mock the `putrequest`, `putheader`, `endheaders`
@@ -30,6 +46,8 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
     global PATCHERS, STORIES
     if story is not None:
         STORIES += story
+    if unmock_options is None:  # Default then!
+        unmock_options = UnmockOptions()
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
         """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
@@ -85,29 +103,29 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
         """
 
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
-            original_endheaders(self, message_body, encode_chunked=encode_chunked)
+            # Return to avoid nesting
+            return original_endheaders(self, message_body, encode_chunked=encode_chunked)
 
-        else:
-            # Otherwise we make the actual call to the unmock service
-            unmock_data = self.unmock.unmock_data
-            method = unmock_data["method"]
+        # Otherwise we make the actual call to the unmock service
+        unmock_data = self.unmock.unmock_data
+        method = unmock_data["method"]
 
-            # Builds the query parameters line
-            query = unmock_options._build_query(story=unmock_data["story"], host=self.host, method=method,
-                                                headers=unmock_data["headers_qp"],
-                                                path="{path}".format(path=unmock_data["path"]))
+        # Builds the query parameters line
+        query = unmock_options._build_query(story=unmock_data["story"], host=self.host, method=method,
+                                            headers=unmock_data["headers_qp"],
+                                            path="{path}".format(path=unmock_data["path"]))
 
-            # Make the request to the service
-            original_putrequest(self.unmock, method=method,
-                                url="{fake_path}?{query}".format(fake_path=unmock_options._xy(token), query=query))
+        # Make the request to the service
+        original_putrequest(self.unmock, method=method,
+                            url="{fake_path}?{query}".format(fake_path=unmock_options._xy(token), query=query))
 
-            # Add all the actual headers to the request
-            for header, value in unmock_data["headers"].items():
-                original_putheader(self.unmock, header, *value)
+        # Add all the actual headers to the request
+        for header, value in unmock_data["headers"].items():
+            original_putheader(self.unmock, header, *value)
 
-            # Save body and call original endheaders with the body message
-            self.unmock.unmock_data["body"] = message_body
-            original_endheaders(self.unmock, message_body, encode_chunked=encode_chunked)
+        # Save body and call original endheaders with the body message
+        self.unmock.unmock_data["body"] = message_body
+        original_endheaders(self.unmock, message_body, encode_chunked=encode_chunked)
 
 
     def unmock_get_response(self: http.client.HTTPConnection):
