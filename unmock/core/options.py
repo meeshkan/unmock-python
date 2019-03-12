@@ -4,6 +4,8 @@ from http.client import HTTPResponse
 import logging
 import json
 
+from .persistence import FSPersistence, Persistence
+
 __all__ = ["UnmockOptions"]
 
 UNMOCK_HOST = "api.unmock.io"
@@ -12,7 +14,7 @@ UNMOCK_PORT = 443
 class UnmockOptions:
     def __init__(self, save: Union[bool, List[str]] = False, unmock_host: str = UNMOCK_HOST, unmock_port = UNMOCK_PORT,
                  use_in_production: bool = False,
-                 logger=None, persistence=None,
+                 logger: Optional[logging.Logger] = None, persistence: Optional[Persistence] = None,
                  ignore=None, signature: Optional[str] = None, token: Optional[str] = None,
                  whitelist: Optional[List[str]] = None):
         if logger is None:
@@ -24,7 +26,6 @@ class UnmockOptions:
             logger.setLevel(logging.INFO)
             logger.addHandler(console_handler)
         self.logger = logger
-        self.persistence = persistence  # TODO
         self.save = save
         self.unmock_host = unmock_host
         self.unmock_port = unmock_port
@@ -35,6 +36,9 @@ class UnmockOptions:
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
+        if persistence is None:
+            persistence = FSPersistence(self.token)
+        self.persistence = persistence
 
     def _is_host_whitelisted(self, host: str):
         return host in self.whitelist
@@ -62,15 +66,13 @@ class UnmockOptions:
         headers = res.headers
         unmock_hash = headers["unmock-hash"]
         if unmock_hash not in story:
-            body = res.msg
+            body = res.peek()  # TODO: only reads part of the data
+            print(body)
             self.logger.info("*****url-called*****")
             data_string = " with data {data}".format(data=data) if data is not None else "."
             self.logger.info("Hi! We see you've called %s %s%s%s", method, host, path, data_string)
             self.logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
                              unmock_hash)
             if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-                # self.persistence.save_headers(hash, headers)  # TODO
-                if body is not None:
-                    # self.persistence.save_body(hash, body)  # TODO
-                    pass
+                self.persistence.save_body(hash=unmock_hash, body=body, headers=headers)
             return unmock_hash

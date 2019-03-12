@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import configparser
 
-__all__ = ["FSPersistence"]
+__all__ = ["FSPersistence", "Persistence"]
 
 class Persistence(ABC):
     """Defines a high-level interface-like abstract class"""
