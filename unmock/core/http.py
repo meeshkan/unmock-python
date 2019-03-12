@@ -8,6 +8,7 @@ from .utils import end_reporter, Patchers
 # Backup:
 UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
 PATCHERS = Patchers()
+STORIES = list()
 
 def parse_url(url) -> SplitResult:
     parsed_url = urlsplit(url)
@@ -16,8 +17,9 @@ def parse_url(url) -> SplitResult:
     return parsed_url
 
 def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None, token: Optional[str] = None):
-    global PATCHERS
-    story = story or list()
+    global PATCHERS, STORIES
+    if story is not None:
+        STORIES += story
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
         if unmock_options.is_host_whitelisted(self.host):
@@ -28,9 +30,10 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
             req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
             req.__setattr__("unmock_data", { "headers_qp": dict(),
                                              "path": "{path}?{query}".format(path=uri.path, query=uri.query),
-                                             "story": story,
+                                             "story": STORIES,
                                              "headers": dict(),
-                                             "method": method })
+                                             "method": method,
+                                             "body": None })
             self.__setattr__("unmock", req)
 
 
@@ -68,14 +71,21 @@ def initialize(unmock_options: UnmockOptions, story: Optional[List[str]] = None,
                                 url="{fake_path}?{query}".format(fake_path=unmock_options.xy(token), query=query))
             for header, value in self.unmock.unmock_data["headers"].items():
                 original_putheader(self.unmock, header, *value)
+            self.unmock.unmock_data["body"] = message_body
             original_endheaders(self.unmock, message_body, encode_chunked=encode_chunked)
 
     def unmock_get_response(self: http.client.HTTPConnection):
+        global STORIES
         if unmock_options.is_host_whitelisted(self.host):
             return original_getresponse(self)
         elif hasattr(self, "unmock"):
-            # TODO: call to end_reporter for a nice printout
-            return original_getresponse(self.unmock)
+            res: http.client.HTTPResponse = original_getresponse(self.unmock)
+            STORIES.append(end_reporter(body=res.read(), data=self.unmock.unmock_data["body"], headers=res.headers,
+                                        host=self.host, logger=unmock_options.logger,
+                                        method=self.unmock.unmock_data["method"], path=self.unmock.unmock_data["path"],
+                                        persistence=unmock_options.persistence, save=unmock_options.save,
+                                        selfcall=False, story=STORIES, xy=unmock_options.xy(token)))
+            return res
 
     original_putrequest = PATCHERS.patch("http.client.HTTPConnection.putrequest", unmock_putrequest)
     original_putheader = PATCHERS.patch("http.client.HTTPConnection.putheader", unmock_putheader)
