@@ -14,10 +14,9 @@ REQUIRES_PYTHON = '>=3.6.0'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
-# Older version of requests because >= 2.21 conflicts with sagemaker.
 REQUIRED = []
 
-DEV = ["twine", "wheel"]
+DEV = ["twine", "wheel", "pytest"]
 
 # Optional packages
 EXTRAS = {'dev': DEV}
