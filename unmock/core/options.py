@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from http.client import HTTPResponse
 import logging
 import json
+import socket
 
 from .persistence import FSPersistence, Persistence
 
@@ -63,16 +64,14 @@ class UnmockOptions:
         return urlencode(qs)
 
     def _end_reporter(self, res: HTTPResponse, data: Any, host: str, method: str, path: str, story: List[str], xy: str):
-        headers = res.headers
-        unmock_hash = headers["unmock-hash"]
-        if unmock_hash not in story:
-            body = res.peek()  # TODO: only reads part of the data
-            print(body)
+        unmock_hash = res.getheader("unmock-hash", default=None)
+        if unmock_hash is not None and unmock_hash not in story:
+            body = res.read().decode()  # TODO: only reads part of the data (socket.fromfd?)
             self.logger.info("*****url-called*****")
             data_string = " with data {data}".format(data=data) if data is not None else "."
             self.logger.info("Hi! We see you've called %s %s%s%s", method, host, path, data_string)
             self.logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
                              unmock_hash)
             if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-                self.persistence.save_body(hash=unmock_hash, body=body, headers=headers)
+                self.persistence.save_body(hash=unmock_hash, body=body, headers=dict(res.getheaders()))
             return unmock_hash
