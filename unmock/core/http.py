@@ -1,6 +1,8 @@
 from typing import Optional, List
 import http.client
 from urllib.parse import urlsplit, SplitResult
+import socket
+import io
 
 from .options import UnmockOptions
 from .utils import Patchers
@@ -146,15 +148,16 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
                                                      story=STORIES, xy=unmock_options._xy(token))
             if new_story is not None:
                 STORIES.append(new_story)
+                res.__setattr__("unmock_hash", new_story)  # So we know the story the response belongs to
             return res
 
     def unmock_response_read(self, amt=None):
-        if hasattr(self, "unmock"): # Already cached!
-            if amt is None:
-                return self.unmock
-            return self.unmock[:amt]
-        s = original_read(self)
-        self.__setattr__("unmock", s)
+        """HTTPResponse.read mock; helps save the body of the unmock response locally if it is so desired.
+        Since TCP sockets are one-time-transport, we need to catch the read operation and use it then, so nothing is
+        missed."""
+        s = original_response_read(self, amt)
+        if hasattr(self, "unmock_hash"):  # We can now save the body of the content if it exists
+            unmock_options._save_body(self.unmock_hash, s.decode())
         return s
 
     # Create the patchers and mock away!
@@ -162,7 +165,9 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
     original_putheader = PATCHERS.patch("http.client.HTTPConnection.putheader", unmock_putheader)
     original_endheaders = PATCHERS.patch("http.client.HTTPConnection.endheaders", unmock_end_headers)
     original_getresponse = PATCHERS.patch("http.client.HTTPConnection.getresponse", unmock_get_response)
-    original_read = PATCHERS.patch("http.client.HTTPResponse.read", unmock_response_read)
+    if unmock_options.save:
+        # Only patch this if we have save=True or save is a list of hashes/stories to save
+        original_response_read = PATCHERS.patch("http.client.HTTPResponse.read", unmock_response_read)
 
     PATCHERS.start()
 

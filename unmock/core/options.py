@@ -50,6 +50,7 @@ class UnmockOptions:
 
     def _build_query(self, story: Optional[List[str]],  headers: Dict[str, Any], host: Optional[str] = None,
                      method: Optional[str] = None, path: Optional[str] = None):
+        """Builds the querypath for unmock requests"""
         qs = {
             "story": json.dumps(story),
             "path": path or "",
@@ -64,14 +65,29 @@ class UnmockOptions:
         return urlencode(qs)
 
     def _end_reporter(self, res: HTTPResponse, data: Any, host: str, method: str, path: str, story: List[str], xy: str):
+        """
+        Reports the capture of an API call, possibly storing the headers in the relevant directory for unmock (if
+        persistence layer is activated via `save` parameter).
+        :param res: The actual response object from Unmock service
+        :param data: The data sent to the unmock server (the body sent)
+        :param host: The original host the request was directed to
+        :param method: The original method for the request
+        :param path: The original path requested from the original host (including query parameters)
+        :param story: The list of current stories used and stored in Unmock
+        :param xy: string representing whether or not this request is public ('/y/') or private ('/x/')
+        :return: A new story if we have not encountered this story before.
+        """
         unmock_hash = res.getheader("unmock-hash", default=None)
         if unmock_hash is not None and unmock_hash not in story:
-            body = res.read().decode()  # TODO: only reads part of the data (socket.fromfd?)
             self.logger.info("*****url-called*****")
             data_string = " with data {data}".format(data=data) if data is not None else "."
             self.logger.info("Hi! We see you've called %s %s%s%s", method, host, path, data_string)
             self.logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
                              unmock_hash)
             if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-                self.persistence.save_body(hash=unmock_hash, body=body, headers=dict(res.getheaders()))
+                self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
             return unmock_hash
+
+    def _save_body(self, unmock_hash, body: Optional[str] = None):
+        if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
+            self.persistence.save_body(hash=unmock_hash, body=body)
