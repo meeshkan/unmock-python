@@ -1,9 +1,8 @@
 from typing import Optional, List
 import http.client
-from urllib.parse import urlsplit, SplitResult
 
 from .options import UnmockOptions
-from .utils import Patchers
+from .utils import Patchers, parse_url
 
 __all__ = ["initialize", "reset"]
 
@@ -11,13 +10,6 @@ __all__ = ["initialize", "reset"]
 UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
 PATCHERS = Patchers()
 STORIES = list()
-
-def parse_url(url) -> SplitResult:
-    parsed_url = urlsplit(url)
-    if parsed_url.scheme == "" or parsed_url.netloc == "":
-        # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
-        return urlsplit("https://{url}".format(url=url))
-    return parsed_url
 
 def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[List[str]] = None,
                token: Optional[str] = None):
