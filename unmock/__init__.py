@@ -1,8 +1,37 @@
 from .__version__ import __version__  # Conform to PEP-0396
 
-from .core import *
 from . import pytest
 from . import flask
 from . import django
+from .core import UnmockOptions
+
+def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
+    """
+    Initialize the unmock library for capturing API calls.
+
+    :param unmock_options: An Optional object allowing customization of how unmock works.
+    :type unmock_options UnmockOptions
+    :param story: An optional list of unmock stories to initialize the state. These represent previous calls to unmock
+        and make unmock stateful.
+    :type story List[str]
+    :param refresh_token: An optional unmock token identifying your account.
+    :type refresh_token str
+    """
+    from . import core  # Imported internally to keep the namespace clear
+
+    if story is not None:
+        core.STORIES += story
+    if unmock_options is None:  # Default then!
+        unmock_options = UnmockOptions(token=refresh_token)
+
+    core.http.initialize(unmock_options)
+
+
+def reset():
+    """
+    Removes Unmock automatic API call capturing, restoring normal behaviour.
+    """
+    from . import core
+    core.http.reset()
 
 del core
