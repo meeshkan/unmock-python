@@ -1,8 +1,6 @@
 from typing import Optional, List
 import http.client
 from urllib.parse import urlsplit, SplitResult
-import socket
-import io
 
 from .options import UnmockOptions
 from .utils import Patchers
