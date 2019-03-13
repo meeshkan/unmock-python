@@ -1,9 +1,9 @@
 from typing import Optional, List
 import http.client
-from urllib.parse import urlsplit, SplitResult
+import os
 
 from .options import UnmockOptions
-from .utils import Patchers
+from .utils import Patchers, parse_url
 
 __all__ = ["initialize", "reset"]
 
@@ -12,15 +12,8 @@ UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
 PATCHERS = Patchers()
 STORIES = list()
 
-def parse_url(url) -> SplitResult:
-    parsed_url = urlsplit(url)
-    if parsed_url.scheme == "" or parsed_url.netloc == "":
-        # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
-        return urlsplit("https://{url}".format(url=url))
-    return parsed_url
-
 def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[List[str]] = None,
-               token: Optional[str] = None):
+               refresh_token: Optional[str] = None):
     """
     Initialize the unmock library for capturing API calls.
 
@@ -29,11 +22,9 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
     :param story: An optional list of unmock stories to initialize the state. These represent previous calls to unmock
         and make unmock stateful.
     :type story List[str]
-    :param token: An optional unmock token identifying your account.
-    :type token str
+    :param refresh_token: An optional unmock *refresh token* identifying your account.
+    :type refresh_token str, optional
     """
-
-    # TODO - `token` is also used in UnmockOptions...?
     """
     Entry point to mock the standard http client. Both `urllib` and `requests` library use the
     `http.client.HTTPConnection`, so mocking it should support their use aswell.
@@ -47,7 +38,10 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
     if story is not None:
         STORIES += story
     if unmock_options is None:  # Default then!
-        unmock_options = UnmockOptions()
+        unmock_options = UnmockOptions(token=refresh_token)
+    if os.environ.get("ENV") == "production" and not unmock_options.use_in_production:
+        return
+    token = unmock_options.get_token()  # Get the *access_token*
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
         """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
@@ -74,6 +68,9 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
                                              "story": STORIES,
                                              "headers": dict(),
                                              "method": method })
+            if token is not None:  # Add token to official headers
+                # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
+                req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
             self.__setattr__("unmock", req)
 
 
@@ -90,6 +87,7 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
             self.unmock.unmock_data["headers_qp"][header] = values
 
         elif header == UNMOCK_AUTH:  # UNMOCK_AUTH is part of the actual headers
+            # TODO: is this ever called...? Where from..?
             self.unmock.unmock_data["headers"]["Authorization"] = values
 
         else:  # Otherwise, we both use it for query parameters and for the actual headers
