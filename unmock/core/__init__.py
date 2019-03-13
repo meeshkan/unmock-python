@@ -7,5 +7,7 @@ STORIES = list()
 from .persistence import *
 from .options import *
 from .http import *
+from . import exceptions
 
-__all__ = ["UnmockOptions"]
+__all__ = ["initialize", "reset", "UnmockOptions", "exceptions"]
+

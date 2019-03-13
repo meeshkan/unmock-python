@@ -1,22 +1,15 @@
 from typing import Optional, List
 import http.client
-from urllib.parse import urlsplit, SplitResult
+import os
 
 from . import PATCHERS, STORIES
 from .options import UnmockOptions
-from .utils import Patchers
+from .utils import Patchers, parse_url
 
 __all__ = ["initialize", "reset"]
 
 # Backup:
 UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
-
-def parse_url(url) -> SplitResult:
-    parsed_url = urlsplit(url)
-    if parsed_url.scheme == "" or parsed_url.netloc == "":
-        # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
-        return urlsplit("https://{url}".format(url=url))
-    return parsed_url
 
 def initialize(unmock_options: UnmockOptions):
     """
@@ -56,6 +49,9 @@ def initialize(unmock_options: UnmockOptions):
                                              "story": STORIES,
                                              "headers": dict(),
                                              "method": method })
+            if token is not None:  # Add token to official headers
+                # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
+                req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
             self.__setattr__("unmock", req)
 
 
@@ -72,6 +68,7 @@ def initialize(unmock_options: UnmockOptions):
             self.unmock.unmock_data["headers_qp"][header] = values
 
         elif header == UNMOCK_AUTH:  # UNMOCK_AUTH is part of the actual headers
+            # TODO: is this ever called...? Where from..?
             self.unmock.unmock_data["headers"]["Authorization"] = values
 
         else:  # Otherwise, we both use it for query parameters and for the actual headers

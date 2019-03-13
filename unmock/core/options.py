@@ -1,11 +1,14 @@
 from typing import Union, List, Optional, Dict, Any
 from urllib.parse import urlencode
 from http.client import HTTPResponse
+from http import HTTPStatus
 import logging
 import json
-import socket
+import requests
 
 from .persistence import FSPersistence, Persistence
+from .utils import parse_url
+from .exceptions import UnmockAuthorizationException
 
 __all__ = ["UnmockOptions"]
 
@@ -28,7 +31,10 @@ class UnmockOptions:
             logger.addHandler(console_handler)
         self.logger = logger
         self.save = save
-        self.unmock_host = unmock_host
+
+        uri = parse_url(unmock_host)
+        self.scheme = uri.scheme
+        self.unmock_host = "{url}{path}{query}".format(url=uri.netloc, path=uri.path, query=uri.query)
         self.unmock_port = unmock_port
         self.use_in_production = use_in_production
         self.ignore = ignore if ignore is not None else { "headers": r"\w*User-Agent\w*" }
@@ -40,6 +46,45 @@ class UnmockOptions:
         if persistence is None:
             persistence = FSPersistence(self.token)
         self.persistence = persistence
+
+    def get_token(self) -> Optional[str]:
+        """
+        Fetches a new access token from the unmock server or predisposed access token if it is still valid.
+        Throws RuntimeError on logical failures with unexpected responses from the Unmock host.
+        """
+        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
+        access_token = self.persistence.load_auth()
+        if access_token is not None:  # If we already have an access token, let's see we can still ping with it
+            if self._validate_access_token(access_token):  # We can ping, all's good in the world!
+                return access_token
+
+        # Otherwise, we need to get a new token
+        refresh_token = self.persistence.load_token()
+        if refresh_token is None:
+            return  # Continue with the public API ('/y/' version)
+        response = requests.post("{url}/token/access".format(url=url), json={"refreshToken": refresh_token})
+        if response.status_code == HTTPStatus.OK:
+            new_access_token = response.json().get("accessToken")
+            if new_access_token is None:  # Response was not present..?
+                raise UnmockAuthorizationException("Incorrect server response: did not get accessToken")
+            if not self._validate_access_token(new_access_token):  # Could still not ping with new access token?!
+                raise UnmockAuthorizationException("Internal authorization error")
+            self.persistence.save_auth(new_access_token)
+            return new_access_token
+        raise UnmockAuthorizationException("Internal authorization error, receieved {response} from"
+                                           " {url}".format(response=response.status_code, url=self.unmock_host))
+
+    def _validate_access_token(self, access_token: str) -> bool:
+        """
+        Validates the access token by pinging the unmock_host with the Authorization header
+        :param access_token:
+        :return: True if token is valid, False otherwise
+        """
+        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
+        response = requests.get("{url}/ping".format(url=url),
+                                headers={"Authorization": "Bearer {token}".format(token=access_token)})
+        return response.status_code == HTTPStatus.OK
+
 
     def _is_host_whitelisted(self, host: str):
         return host in self.whitelist
