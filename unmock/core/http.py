@@ -146,13 +146,27 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
                                                      story=STORIES, xy=unmock_options._xy(token))
             if new_story is not None:
                 STORIES.append(new_story)
+                res.__setattr__("unmock_hash", new_story)  # So we know the story the response belongs to
             return res
+
+    def unmock_response_read(self, amt=None):
+        """HTTPResponse.read mock; helps save the body of the unmock response locally if it is so desired.
+        Since TCP sockets are one-time-transport, we need to catch the read operation and use it then, so nothing is
+        missed."""
+        s = original_response_read(self, amt)
+        if hasattr(self, "unmock_hash"):  # We can now save the body of the content if it exists
+            unmock_options._save_body(self.unmock_hash, s.decode())
+        return s
 
     # Create the patchers and mock away!
     original_putrequest = PATCHERS.patch("http.client.HTTPConnection.putrequest", unmock_putrequest)
     original_putheader = PATCHERS.patch("http.client.HTTPConnection.putheader", unmock_putheader)
     original_endheaders = PATCHERS.patch("http.client.HTTPConnection.endheaders", unmock_end_headers)
     original_getresponse = PATCHERS.patch("http.client.HTTPConnection.getresponse", unmock_get_response)
+    if unmock_options.save:
+        # Only patch this if we have save=True or save is a list of hashes/stories to save
+        original_response_read = PATCHERS.patch("http.client.HTTPResponse.read", unmock_response_read)
+
     PATCHERS.start()
 
 def reset():

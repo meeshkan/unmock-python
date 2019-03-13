@@ -1,3 +1,4 @@
+from .persistence import *
 from .options import *
 from .utils import *
 from .http import *
