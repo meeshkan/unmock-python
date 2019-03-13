@@ -13,7 +13,7 @@ jobs:
     steps:
     - checkout
     - build
-    - run: git config credential.helper "/bin/bash ./git-credentials-helper.sh"
+    - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
     - run: python setup.py upload
 
 workflows:
