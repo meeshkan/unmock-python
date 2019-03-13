@@ -1,5 +1,6 @@
 from typing import Optional, List
 import http.client
+import os
 
 from .options import UnmockOptions
 from .utils import Patchers, parse_url
@@ -37,7 +38,9 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
     if story is not None:
         STORIES += story
     if unmock_options is None:  # Default then!
-        unmock_options = UnmockOptions()
+        unmock_options = UnmockOptions(token=refresh_token)
+    if os.environ.get("ENV") == "production" and not unmock_options.use_in_production:
+        return
     token = unmock_options.get_token()  # Get the *access_token*
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
