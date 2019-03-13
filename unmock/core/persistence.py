@@ -12,7 +12,8 @@ class Persistence(ABC):
         self.token = token  # Token is only ever saved in memory, everything else is up to the implementation
 
     @abstractmethod
-    def save_body(self, hash: str, body: str = None, headers: str = None) -> None:
+    def save_body(self, hash: str, body: Optional[Dict[str, Any]] = None,
+                  headers: Optional[Dict[str, Any]] = None) -> None:
         pass
 
     @abstractmethod
@@ -20,11 +21,11 @@ class Persistence(ABC):
         pass
 
     @abstractmethod
-    def load_headers(self, hash: str) -> Optional[Dict[str, str]]:
+    def load_headers(self, hash: str) -> Optional[Dict[str, Any]]:
         pass
 
     @abstractmethod
-    def load_body(self, hash: str) -> Optional[Dict[str, str]]:
+    def load_body(self, hash: str) -> Optional[Dict[str, Any]]:
         pass
 
     @abstractmethod
@@ -67,19 +68,20 @@ class FSPersistence(Persistence):
         hashdir.mkdir(parents=True, exist_ok=True)
         return hashdir
 
-    def __write_to_hashed(self, hash: str, filename: str, content: str):
+    def __write_to_hashed(self, hash: str, filename: str, content: Any):
         with self.__outdir(hash).joinpath(filename).open('w') as fp:
             json.dump(content, fp, indent=2)
             fp.flush()
 
-    def __load_from_hashed(self, hash: str, filename: str) -> Optional[Union[Dict[str, str], str]]:
+    def __load_from_hashed(self, hash: str, filename: str) -> Optional[Union[Dict[str, Any], str]]:
         try:
             with self.__outdir(hash).joinpath(filename).open() as fp:
                 return json.load(fp)
         except (json.JSONDecodeError, OSError):  # Raise on other errors
             return None
 
-    def save_body(self, hash: str, body: str = None, headers: str = None) -> None:
+    def save_body(self, hash: str, body: Optional[Dict[str, Any]] = None,
+                  headers: Optional[Dict[str, Any]] = None) -> None:
         if headers is not None:
             self.__write_to_hashed(hash=hash, filename=FSPersistence.HEADERS_FILE, content=headers)
         if body is not None:
@@ -95,10 +97,10 @@ class FSPersistence(Persistence):
             tknfd.write(auth)
             tknfd.flush()
 
-    def load_headers(self, hash: str) -> Optional[Dict[str, str]]:
+    def load_headers(self, hash: str) -> Optional[Dict[str, Any]]:
         return self.__load_from_hashed(hash, FSPersistence.HEADERS_FILE)
 
-    def load_body(self, hash: str) -> Optional[Dict[str, str]]:
+    def load_body(self, hash: str) -> Optional[Dict[str, Any]]:
         return self.__load_from_hashed(hash, FSPersistence.BODY_FILE)
 
     def load_auth(self) -> Optional[str]:
