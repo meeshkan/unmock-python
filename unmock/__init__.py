@@ -3,7 +3,11 @@ from .__version__ import __version__  # Conform to PEP-0396
 from . import pytest
 from . import flask
 from . import django
-from .core import UnmockOptions
+from .core import UnmockOptions, exceptions
+
+def init(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
+    """Shorthand for initialize"""
+    initialize(unmock_options, story, refresh_token)
 
 def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
     """

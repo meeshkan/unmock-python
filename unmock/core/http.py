@@ -27,7 +27,6 @@ def initialize(unmock_options: UnmockOptions):
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
         """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
         about the endpoint and method."""
-        global STORIES
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
             original_putrequest(self, method, url, skip_host, skip_accept_encoding)
 
@@ -112,7 +111,6 @@ def initialize(unmock_options: UnmockOptions):
         Here we just need to redirect and use the getresponse from the linked unmock connection, output some messages
         and update the stories.
         """
-        global STORIES
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
             return original_getresponse(self)
 

@@ -1,4 +1,4 @@
-from typing import Union, List, Optional, Dict, Any
+from typing import Union, List, Optional, Dict, Any, cast
 from urllib.parse import urlencode
 from http.client import HTTPResponse
 from http import HTTPStatus
@@ -24,11 +24,18 @@ class UnmockOptions:
         if logger is None:
             # TODO - move the logging definition elsewhere? Console output by default?
             logger = logging.getLogger("reporter")
-            frmtr = logging.Formatter("[%(asctime)s] %(levelname)s\\%(name)s - %(message)s")
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(frmtr)
             logger.setLevel(logging.INFO)
-            logger.addHandler(console_handler)
+            # For now, make sure we only have one stream logger...
+            has_stream_handler = False
+            for handler in logger.handlers:
+                if isinstance(handler, logging.StreamHandler):
+                    has_stream_handler = True
+                    break
+            if not has_stream_handler:
+                frmtr = logging.Formatter("[%(asctime)s] %(levelname)s\\%(name)s - %(message)s")
+                console_handler = logging.StreamHandler()
+                console_handler.setFormatter(frmtr)
+                logger.addHandler(console_handler)
         self.logger = logger
         self.save = save
 
