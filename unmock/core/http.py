@@ -23,7 +23,7 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
         and make unmock stateful.
     :type story List[str]
     :param refresh_token: An optional unmock *refresh token* identifying your account.
-    :type refresh_token str
+    :type refresh_token str, optional
     """
     """
     Entry point to mock the standard http client. Both `urllib` and `requests` library use the

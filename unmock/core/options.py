@@ -8,6 +8,7 @@ import requests
 
 from .persistence import FSPersistence, Persistence
 from .utils import parse_url
+from .exceptions import UnmockAuthorizationException
 
 __all__ = ["UnmockOptions"]
 
@@ -65,13 +66,13 @@ class UnmockOptions:
         if response.status_code == HTTPStatus.OK:
             new_access_token = response.json().get("accessToken")
             if new_access_token is None:  # Response was not present..?
-                raise RuntimeError("Incorrect server response: did not get accessToken")
+                raise UnmockAuthorizationException("Incorrect server response: did not get accessToken")
             if not self._validate_access_token(new_access_token):  # Could still not ping with new access token?!
-                raise RuntimeError("Internal authorization error")
+                raise UnmockAuthorizationException("Internal authorization error")
             self.persistence.save_auth(new_access_token)
             return new_access_token
-        raise RuntimeError("Internal authorization error, receieved "
-                           "{response} from {url}".format(response=response.status_code, url=self.unmock_host))
+        raise UnmockAuthorizationException("Internal authorization error, receieved {response} from"
+                                           " {url}".format(response=response.status_code, url=self.unmock_host))
 
     def _validate_access_token(self, access_token: str) -> bool:
         """
