@@ -7,7 +7,7 @@ jobs:
     - checkout
     - run: python -m pip install --upgrade pip setuptools wheel
     - run: pip install --upgrade -e .[dev] --user
-    - run: python -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock-python --cov-report=xml --cov-report=html --cov-fail-under=80
+    - run: python -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html
 
   deploy:
     docker:
