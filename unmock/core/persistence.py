@@ -116,7 +116,7 @@ class FSPersistence(Persistence):
         return self.__load_from_hashed(hash, FSPersistence.BODY_FILE)
 
     def load_auth(self) -> Optional[str]:
-        return self.token_path.read_text()
+        return self.token_path.read_text() if self.token_path.exists() else None
 
     def load_token(self) -> Optional[str]:
         if self.token is not None:

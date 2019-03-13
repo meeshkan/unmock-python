@@ -1,9 +1,10 @@
 from typing import List, Dict, Any, Union
 from collections.abc import Iterable
 import json
+from urllib.parse import urlsplit, SplitResult
 from unittest import mock
 
-__all__ = ["Patchers"]
+__all__ = ["Patchers", "parse_url"]
 
 class Patchers:
     """Represents a collection of mock.patcher objects to be started/stopped simulatenously."""
@@ -16,7 +17,6 @@ class Patchers:
         If `target` is already mocked, it is ignored."""
         if target in self.targets:
             return
-        print("Mocking", target)
         patcher = mock.patch(target, new_destination)
         self.targets.append(target)
         self.patchers.append(patcher)
@@ -41,3 +41,10 @@ class Patchers:
         """Stops all registered patchers"""
         for patcher in self.patchers:
             patcher.stop()
+
+def parse_url(url) -> SplitResult:
+    parsed_url = urlsplit(url)
+    if parsed_url.scheme == "" or parsed_url.netloc == "":
+        # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
+        return urlsplit("https://{url}".format(url=url))
+    return parsed_url
