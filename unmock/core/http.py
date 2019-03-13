@@ -12,7 +12,7 @@ PATCHERS = Patchers()
 STORIES = list()
 
 def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[List[str]] = None,
-               token: Optional[str] = None):
+               refresh_token: Optional[str] = None):
     """
     Initialize the unmock library for capturing API calls.
 
@@ -21,11 +21,9 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
     :param story: An optional list of unmock stories to initialize the state. These represent previous calls to unmock
         and make unmock stateful.
     :type story List[str]
-    :param token: An optional unmock token identifying your account.
-    :type token str
+    :param refresh_token: An optional unmock *refresh token* identifying your account.
+    :type refresh_token str
     """
-
-    # TODO - `token` is also used in UnmockOptions...?
     """
     Entry point to mock the standard http client. Both `urllib` and `requests` library use the
     `http.client.HTTPConnection`, so mocking it should support their use aswell.
@@ -40,6 +38,7 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
         STORIES += story
     if unmock_options is None:  # Default then!
         unmock_options = UnmockOptions()
+    token = unmock_options.get_token()  # Get the *access_token*
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
         """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
@@ -66,6 +65,9 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
                                              "story": STORIES,
                                              "headers": dict(),
                                              "method": method })
+            if token is not None:  # Add token to official headers
+                # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
+                req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
             self.__setattr__("unmock", req)
 
 
@@ -82,6 +84,7 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
             self.unmock.unmock_data["headers_qp"][header] = values
 
         elif header == UNMOCK_AUTH:  # UNMOCK_AUTH is part of the actual headers
+            # TODO: is this ever called...? Where from..?
             self.unmock.unmock_data["headers"]["Authorization"] = values
 
         else:  # Otherwise, we both use it for query parameters and for the actual headers
