@@ -10,6 +10,7 @@ jobs:
     - run: pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock-python --cov-report=xml --cov-report=html --cov-fail-under=80
 
   deploy:
+    - image: circleci/python:3.6.8
     steps:
     - checkout
     - build
