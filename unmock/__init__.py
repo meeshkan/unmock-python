@@ -4,7 +4,5 @@ from .core import *
 from . import pytest
 from . import flask
 from . import django
-from . import core
 
 del core
-
