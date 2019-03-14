@@ -166,10 +166,12 @@ Note that this is *case insensitive*!
 * `story`: the story of the request, meaning its order in a series of requests
 
 Ignore evaluates regular expressions, so you can also pass
-`"headers|path"` instead of `["headers", "path"]`. Furthermore,
-to ignore nested headers, pass an object such as
-`{headers: "Authorization" }`, or to match against the value of
-a header, `{headers: { Authorization: "Bearer *" }}`.
+`"headers|path"` instead of `["headers", "path"]`. Furthermore, to
+ignore nested headers, pass a dictionary such as
+`{"headers": "Authorization" }`, or to match against the value of a
+header, `{"headers": { Authorization: "Bearer *" }}`. When using the
+ignore _method_ on the `UnmockOptions` object, you may pass either a
+list (`*args`) or a dictionary (`**kwargs`).
 
 ### Adding a signature
 
@@ -205,14 +207,6 @@ you can pass your unmock token directly to the unmock object.
 
 ```
 unmock.init(token="my-token")
-```
-
-```js
-await unmock({
-  // ...
-  token: "my-token",
-  // ...
-}));
 ```
 
 At a certain point this becomes a bit tedious, (even if very readable),
