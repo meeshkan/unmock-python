@@ -7,10 +7,10 @@ commands:
       - checkout
       - run:
           name: Setup Tools
-          command: python3 -m pip install --upgrade pip setuptools wheel
+          command: python3 -m pip install --user --upgrade pip setuptools wheel
       - run:
           name: Installing package
-          command: pip3 install --upgrade -e .[dev] --user
+          command: python3 -m pip install --user --upgrade -e .[dev]
   test:
     description: "Run tests, possibly publishing results"
     parameters:
