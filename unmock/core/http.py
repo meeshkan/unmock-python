@@ -2,6 +2,7 @@ from typing import Optional, List
 import http.client
 import os
 
+from . import PATCHERS, STORIES
 from .options import UnmockOptions
 from .utils import Patchers, parse_url
 
@@ -9,44 +10,23 @@ __all__ = ["initialize", "reset"]
 
 # Backup:
 UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
-PATCHERS = Patchers()
-STORIES = list()
 
-def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[List[str]] = None,
-               refresh_token: Optional[str] = None):
-    """
-    Initialize the unmock library for capturing API calls.
-
-    :param unmock_options: An Optional object allowing customization of how unmock works.
-    :type unmock_options UnmockOptions
-    :param story: An optional list of unmock stories to initialize the state. These represent previous calls to unmock
-        and make unmock stateful.
-    :type story List[str]
-    :param refresh_token: An optional unmock *refresh token* identifying your account.
-    :type refresh_token str, optional
-    """
+def initialize(unmock_options: UnmockOptions):
     """
     Entry point to mock the standard http client. Both `urllib` and `requests` library use the
     `http.client.HTTPConnection`, so mocking it should support their use aswell.
 
     We mock the "low level" API (instead of the `request` method, we mock the `putrequest`, `putheader`, `endheaders`
     and `getresponse` methods; the `request` method calls these sequentially).
+    To save the body of the response, we also mock the HTTPResponse's `read` method.
 
     HTTPSConnection also uses the regular HTTPConnection methods under the hood -> hurray!
     """
-    global PATCHERS, STORIES
-    if story is not None:
-        STORIES += story
-    if unmock_options is None:  # Default then!
-        unmock_options = UnmockOptions(token=refresh_token)
-    if os.environ.get("ENV") == "production" and not unmock_options.use_in_production:
-        return
     token = unmock_options.get_token()  # Get the *access_token*
 
     def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
         """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
         about the endpoint and method."""
-        global STORIES
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
             original_putrequest(self, method, url, skip_host, skip_accept_encoding)
 
@@ -131,7 +111,6 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
         Here we just need to redirect and use the getresponse from the linked unmock connection, output some messages
         and update the stories.
         """
-        global STORIES
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
             return original_getresponse(self)
 
@@ -168,6 +147,5 @@ def initialize(unmock_options: Optional[UnmockOptions] = None, story: Optional[L
     PATCHERS.start()
 
 def reset():
-    global PATCHERS, STORIES
-    PATCHERS.stop()
-    STORIES = list()  # Reset stories
+    PATCHERS.clear()
+    STORIES.clear()
