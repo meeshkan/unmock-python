@@ -19,7 +19,7 @@ REQUIRED = ["requests", "yml"]
 DEV = ["twine", "wheel", "pytest", "pytest-cov"]
 
 # Optional packages
-EXTRAS = {'dev': DEV}
+EXTRAS = {'dev': REQUIRED + DEV}
 
 # Entry point (relative to setup.py)
 ENTRY_POINTS = []
