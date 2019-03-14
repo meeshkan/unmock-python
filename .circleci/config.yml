@@ -1,19 +1,80 @@
-version: 2
+version: 2.1
+
+commands:
+  setup:
+    description: "Installs python packages and source module"
+    steps:
+      - checkout
+      - run:
+          name: Setup Tools
+          command: python3 -m pip install --user --upgrade pip setuptools wheel
+      - run:
+          name: Installing package
+          command: python3 -m pip install --user --upgrade -e .[dev]
+  test:
+    description: "Run tests, possibly publishing results"
+    parameters:
+      publish:
+        type: boolean
+        default: false
+    steps:
+      - run:
+          name: pytest
+          command: python3 -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html #--cov-fail-under=80
+      - when:
+          condition: << parameters.publish >>
+          steps:
+            - store_test_results:
+                path: junit
+
 jobs:
-  build:  # default entry point for CircleCI
+  build:  # default entry point for CircleCI, test against Python 3.6.8
     docker:
       - image: circleci/python:3.6.8
     steps:
-    - checkout
-    - run: python -m pip install --upgrade pip setuptools wheel
-    - run: pip install --upgrade -e .[dev]
-    - run: pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock-python --cov-report=xml --cov-report=html --cov-fail-under=80
+    - setup
+    - test:
+        publish: true
+
+  linux27:  # Python 2.7.16
+    docker:
+      - image: circleci/python:2.7.16
+    steps:
+    - setup
+    - test
+
+  linux37:  # Python 3.7.5 RC version
+    docker:
+      - image: circleci/python:3.7-rc
+    steps:
+    - setup
+    - test
+  
+  macOS36:
+    macos:
+      # https://circle-macos-docs.s3.amazonaws.com/image-manifest/build-430/index.html
+      # Python 3.6.5, Darwin 17.4.0, macOS 10.13.3
+      xcode: "9.4.1"
+    steps:
+    - setup
+    - test
+
+  macOS37:
+    macos:
+      # https://circle-macos-docs.s3.amazonaws.com/image-manifest/build-520/index.html
+      # Python 3.7.2, Darwin 18.2.0, macOS 10.14.3
+      xcode: "10.2.0"
+    steps:
+    - setup
+    - test
+
 
   deploy:
+    docker:
+      - image: circleci/python:3.6.8
     steps:
-    - checkout
-    - build
-    - run: git config credential.helper "/bin/bash ./git-credentials-helper.sh"
+    - setup
+    - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
     - run: python setup.py upload
 
 workflows:
@@ -21,9 +82,15 @@ workflows:
   build-and-deploy:
     jobs:
       - build
+      #- macOS36  # Commented out as we don't have that in CircleCI yet
+      #- macOS37
+      - linux37
       - deploy:
-        requires:
-          - build
-        filters:
-          branches:
-            only: master
+          requires:
+            - build
+            #- macOS36
+            #- macOS37
+            - linux37
+          filters:
+            branches:
+              only: master

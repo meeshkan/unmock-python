@@ -16,7 +16,7 @@ SRC_DIR = 'unmock'  # Relative location wrt setup.py
 # Required packages.
 REQUIRED = ["requests"]
 
-DEV = ["twine", "wheel", "pytest"]
+DEV = ["twine", "wheel", "pytest", "pytest-cov"]
 
 # Optional packages
 EXTRAS = {'dev': DEV}
