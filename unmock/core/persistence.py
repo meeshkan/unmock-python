@@ -42,19 +42,19 @@ class Persistence(ABC):
 
 class FSPersistence(Persistence):
     """File system based persistence layer"""
-    HOMEPATH = Path.home()    # Get home directory for current user
     HEADERS_FILE = "response-header.json"
     BODY_FILE = "response.json"
 
-    def __init__(self, token):
+    def __init__(self, token, path=None):
         super().__init__(token)
+        self.homepath = Path(path or Path.home()).absolute()  # Given directory or home path
         self.unmock_dir.mkdir(parents=True, exist_ok=True)  # Create home directory if needed
         # Maps unmock hashes to partial json body, when body is read in chunks
         self.partial_body_jsons: Dict[str, str] = dict()
 
     @property
     def unmock_dir(self):
-        return FSPersistence.HOMEPATH.joinpath(".unmock")
+        return self.homepath.joinpath(".unmock")
 
     @property
     def token_path(self):
