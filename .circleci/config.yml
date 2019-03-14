@@ -74,14 +74,14 @@ workflows:
   build-and-deploy:
     jobs:
       - build
-      - macOS36
-      - macOS37
+      #- macOS36  # Commented out as we don't have that in CircleCI yet
+      #- macOS37
       - linux37
       - deploy:
           requires:
             - build
-            - macOS36
-            - macOS37
+            #- macOS36
+            #- macOS37
             - linux37
           filters:
             branches:
