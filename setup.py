@@ -14,12 +14,12 @@ REQUIRES_PYTHON = '>=3.6.0'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
-REQUIRED = ["requests", "yml"]
+REQUIRED = ["requests", "PyYAML"]
 
 DEV = ["twine", "wheel", "pytest", "pytest-cov"]
 
 # Optional packages
-EXTRAS = {'dev': REQUIRED + DEV}
+EXTRAS = {'dev': DEV}
 
 # Entry point (relative to setup.py)
 ENTRY_POINTS = []
