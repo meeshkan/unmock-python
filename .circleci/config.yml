@@ -20,7 +20,7 @@ commands:
     steps:
       - run:
           name: pytest
-          command: python3 -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html
+          command: python3 -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html #--cov-fail-under=80
       - when:
           condition: << parameters.publish >>
           steps:
@@ -35,6 +35,14 @@ jobs:
     - setup
     - test:
         publish: true
+
+  linux27:  # Python 2.7.16
+    docker:
+      - image: circleci/python:2.7.16
+    steps:
+    - setup
+    - test
+
   linux37:  # Python 3.7.5 RC version
     docker:
       - image: circleci/python:3.7-rc
