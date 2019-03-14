@@ -112,7 +112,6 @@ i.e. when you are in sandbox or development mode.
 For users of the [unmock.io](https://www.unmock.io) service, this will
 help unmock better organize your mocks in its web dashboard.
 
-
 ### unmock.io
 
 The URLs printed to the command line are hosted by unmock.io. You can
@@ -233,4 +232,3 @@ this project you agree to abide by its terms.
 
 Copyright (c) 2018–2019 [Meeshkan](http://meeshkan.com) and other
 [contributors](https://github.com/unmock/unmock/graphs/contributors).
-
