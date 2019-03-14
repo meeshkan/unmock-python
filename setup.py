@@ -14,7 +14,7 @@ REQUIRES_PYTHON = '>=3.6.0'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
-REQUIRED = ["requests"]
+REQUIRED = ["requests", "yaml"]
 
 DEV = ["twine", "wheel", "pytest", "pytest-cov"]
 

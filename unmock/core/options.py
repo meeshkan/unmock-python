@@ -23,20 +23,8 @@ class UnmockOptions:
                  ignore=None, signature: Optional[str] = None, token: Optional[str] = None,
                  whitelist: Optional[List[str]] = None):
         if logger is None:
-            # TODO - move the logging definition elsewhere? Console output by default?
-            logger = logging.getLogger("reporter")
-            logger.setLevel(logging.INFO)
-            # For now, make sure we only have one stream logger...
-            has_stream_handler = False
-            for handler in logger.handlers:
-                if isinstance(handler, logging.StreamHandler):
-                    has_stream_handler = True
-                    break
-            if not has_stream_handler:
-                frmtr = logging.Formatter("[%(asctime)s] %(levelname)s\\%(name)s - %(message)s")
-                console_handler = logging.StreamHandler()
-                console_handler.setFormatter(frmtr)
-                logger.addHandler(console_handler)
+            logger = logging.getLogger("Unmock Reporter")
+            logger.setLevel(logging.DEBUG)
         self.logger = logger
         self.save = save
 

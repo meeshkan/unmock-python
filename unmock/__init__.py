@@ -7,6 +7,7 @@ def init(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
     """Shorthand for initialize"""
     initialize(unmock_options, story, refresh_token)
 
+
 def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=None) -> UnmockOptions:
     """
     Initialize the unmock library for capturing API calls.
@@ -19,7 +20,11 @@ def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=N
     :param refresh_token: An optional unmock token identifying your account.
     :type refresh_token str
     """
+    from pathlib import Path
     from . import core  # Imported internally to keep the namespace clear
+    logs_dir = logs_dir=Path.home().joinpath(".unmock").joinpath("logs")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    core.setup_logging(logs_dir)
 
     if story is not None:
         core.STORIES += story
