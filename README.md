@@ -89,14 +89,15 @@ After you create your flask, django, or own server, call
 
 
 ```python
-unmock.init(unmock.ignore_story())
+unmock_options = unmock.init()
+unmock_options.ignore("story")
 ```
 
 This has the same effect as activating unmock in your tests.
 It will intercept HTTP traffic and serve semantically and functionally
 adequate mocks of the APIs in the unmock catalogue.
-The main difference is the result of `ignore_story()` passed to unmock,
-which tells the service to ignore the order of mocked requests.
+The main difference is the result of `ignore("story")` passed to unmock
+options, which tells the service to ignore the order of mocked requests.
 Always use this option when the order of mocked data does not matter,
 i.e. when you are in sandbox or development mode.
 For users of the [unmock.io](https://www.unmock.io) service, this will
@@ -104,87 +105,104 @@ help unmock better organize your mocks in its web dashboard.
 
 ### Headless usage
 
-Unmock works out of the box for most APIs that it mocks and does not require any additional configuration.  For APIs that it does not mock yet, or to tweak return values from the unmock service, you can consult the URLs printed to the command line by unmock.
+Unmock works out of the box for most APIs that it mocks and does not
+require any additional configuration. For APIs that it does not mock
+yet, or to tweak return values from the unmock service, you can consult
+the URLs printed to the command line by unmock.
 
 ### unmock.io
 
-The URLs printed to the command line are hosted by unmock.io.  You can consult the documentation about that service [here](https://www.unmock.io/docs).
+The URLs printed to the command line are hosted by unmock.io. You can
+consult the documentation about that service
+[here](https://www.unmock.io/docs).
 
 ### Saving mocks
 
-All mocks can be saved to a folder called `.unmock` in your project's root directory by adding a `save` field to the unmock options object like so:
+All mocks can be saved to a folder called `.unmock` in your user's home
+directory by adding a `save` field to the unmock options object like so:
 
-```js
-await unmock({
-  // ...
-  save: "true",
-  // ...
-}));
+```python
+unmock_options = unmock.init(save=True)
 ```
+You can also specify a specific location to save the directory:
+```python
+unmock_options = unmock.init(save=True, path=".")  # Saves in current path
+```
+Unmock refers to every mock by a unique hash. Individual mocks or groups
+of mocks can be saved by setting save to either a single hash or an
+array of hashes like so:
 
-Unmock refers to every mock by a unique hash.  Individual mocks or groups of mocks can be saved by setting save to either a single hash or an array of hashes like so:
-
-```js
-await unmock({
-  // ...
-  save: ["ahash", "anotherhash", "yetanotherhash"],
-  // ...
-}));
+```python
+unmock_options = unmock.init(save=["ahash", "anotherhash", "yetanotherhash"])
 ```
 
 ### Ignoring aspects of a mock
 
-Sometimes, you would like for two mocks of slightly API calls to be treated as equivalent by unmock.  For example, you may want all `GET` calls to the same path with different headers to be served the same mock.  To do this, use the `ignore` field of the unmock options object.
+Sometimes, you would like for two mocks of slightly API calls to be
+treated as equivalent by unmock. For example, you may want all `GET`
+calls to the same path with different headers to be served the same
+mock. To do this, use the `ignore` field of the unmock options object.
+You can do this while initializing unmock or afterwards (as shown before
+with ignoring `"story"`):
 
-```js
-await unmock({
-  // ...
-  ignore: ["headers", "story"],
-  // ...
-}));
+```python
+# Option A:
+unmock_options = unmock.init()
+unmock_options.ignore("headers", "story")
+# Option B:
+unmock.init(unmock.UnmockOptions(ignore=["headers", "story"]))
 ```
 
 The following fields may be ignored:
 
 * `headers`: the headers of the request
 * `hostname`: the hostname of the request
-* `method`: the method of the request (ie GET, POST, PUT, DELETE). Note that this is *case insensitive*!
+* `method`: the method of the request (ie GET, POST, PUT, DELETE).
+Note that this is *case insensitive*!
 * `path`: the path of the request
 * `story`: the story of the request, meaning its order in a series of requests
 
 Ignore evaluates regular expressions, so you can also pass
-`"headers|path"` instead of `["headers", "path"]`.  Furthermore,
+`"headers|path"` instead of `["headers", "path"]`. Furthermore,
 to ignore nested headers, pass an object such as
 `{headers: "Authorization" }`, or to match against the value of
 a header, `{headers: { Authorization: "Bearer *" }}`.
 
 ### Adding a signature
 
-Sometimes, it is useful to sign a mock with a unique signature.  This is useful, for example, when AB testing code that should serve two different mocks for the same endpoint in otherwise similar conditions.  Do this, use the `signature` field of the unmock options object:
+Sometimes, it is useful to sign a mock with a unique signature. This is
+useful, for example, when AB testing code that should serve two
+different mocks for the same endpoint in otherwise similar conditions.
+To do this, use the `signature` field of the unmock options object:
 
-```js
-await unmock({
-  // ...
-  signature: "signature-for-this-particular-test",
-  // ...
-}));
+```python
+# Option A:
+unmock_options = unmock.init()
+unmock_options.signature = "signature-for-this-particular-test"
+# Option B
+unmock.init(unmock.UnmockOptions(signature="signature-for-this-particular-test"))
 ```
 
 ### Whitelisting API
 
 If you do not want a particular API to be mocked, whitelist it.
 
-```js
-await unmock({
-  // ...
-  whitelist: ["api.hubspot.com", "api.typeform.com"],
-  // ...
-}));
+```python
+# Option A:
+unmock_options = unmock.init()
+unmock_options.whitelist = ["api.hubspot.com", "api.typeform.com"]
+# Option B:
+unmock.init(unmock.UnmockOptions(whitelist=["api.hubspot.com", "api.typeform.com"]))
 ```
 
 ### unmock.io tokens
 
-If you are subscribed to the [unmock.io](https://www.unmock.io) service, you can pass your unmock token directly to the unmock object.
+If you are subscribed to the [unmock.io](https://www.unmock.io) service,
+you can pass your unmock token directly to the unmock object.
+
+```
+unmock.init(token="my-token")
+```
 
 ```js
 await unmock({
@@ -194,17 +212,27 @@ await unmock({
 }));
 ```
 
-At a certain point this becomes a bit tedious, at which point you will want to create a credentials file.  See [unmock.io/docs](https://wwunmock.io/docs) for more information on credential files.
+At a certain point this becomes a bit tedious, (even if very readable),
+at which point you will want to create a credentials file. See
+[unmock.io/docs](https://wwunmock.io/docs) for more information on
+credential files.
+Behind the scenes, we automatically create a credentials file for you,
+for caching purposes. With this, subsequent calls to `unmock.init()`
+will read the token from the credential files. 
 
 ## Contributing
 
-Thanks for wanting to contribute! Take a look at our [Contributing Guide](CONTRIBUTING.md) for notes on our commit message conventions and how to run tests.
+Thanks for wanting to contribute! We will soon have a contributing page
+detaling how to contribute. Meanwhile, star this repository, open issues
+and ask for more features and support!
 
-Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md).
-By participating in this project you agree to abide by its terms.
+Please note that this project is released with a
+[Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in
+this project you agree to abide by its terms.
 
 ## License
 
 [MIT](LICENSE)
 
-Copyright (c) 2018–2019 [Meeshkan](http://meeshkan.com) and other [contributors](https://github.com/unmock/unmock/graphs/contributors).
+Copyright (c) 2018–2019 [Meeshkan](http://meeshkan.com) and other
+[contributors](https://github.com/unmock/unmock/graphs/contributors).
