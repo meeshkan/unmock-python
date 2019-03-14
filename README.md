@@ -1,20 +1,23 @@
-# Unmock (Python SDK)
+# [Unmock](https://www.unmock.io/) (Python SDK)
 [![CircleCI](https://circleci.com/gh/unmock/unmock-python.svg?style=svg)](https://circleci.com/gh/unmock/unmock-python)
 
 Public API mocking for Python.
 
-Unmock can be used to test modules that perform requests to third-party APIs like Hubspot, SendGrid, Behance, and
-hundreds of other public APIs.
+Unmock can be used to test modules that perform requests to third-party
+APIs like Hubspot, SendGrid, Behance, and hundreds of other public APIs.
 
-Unmock can also be used to mock these APIs in a development environment, i.e. an express server on a local machine or in
-a staging environment.
+Unmock can also be used to mock these APIs in a development environment,
+i.e. an express server on a local machine or in a staging environment.
 
-The Unmock Python package offers intuitive, hassle-free SDK to the Unmock service with minimal setup steps.
+The Unmock Python package offers intuitive, hassle-free SDK to the
+Unmock service with minimal setup steps.
 
-The ultimate goal of unmock is to provide a semantically and functionally adequate mock of the internet.
+The ultimate goal of unmock is to provide a semantically and
+functionally adequate mock of the internet.
 
-Unmock also provides access via other languages, all with similar interface.
-We have [unmock-js](https://github.com/unmock/unmock-js) publicly available, and we are working on .Net, PHP and Java.
+Unmock also provides access via other languages, all with similar
+interface. We have [unmock-js](https://github.com/unmock/unmock-js)
+already publicly available, and we are working on .Net, PHP and Java.
 We're open to more requests - just [let us know](mailto:contact@unmock.io)!
 
 **Table of Contents**
@@ -28,7 +31,6 @@ We're open to more requests - just [let us know](mailto:contact@unmock.io)!
   - [Usage](#usage)
     - [Tests](#tests)
     - [Development](#development)
-    - [Headless usage](#headless-usage)
     - [unmock.io](#unmockio)
     - [Saving mocks](#saving-mocks)
     - [Ignoring aspects of a mock](#ignoring-aspects-of-a-mock)
@@ -42,10 +44,17 @@ We're open to more requests - just [let us know](mailto:contact@unmock.io)!
 
 ## How does it work?
 
-Unmock works by overriding Python's low-level `HTTPConnection`'s and `HTTPRequest`'s functions, thereby capturing calls
+Unmock works by overriding Python's low-level `HTTPConnection`'s and
+`HTTPRequest`'s functions, thereby capturing calls
 made by popular packages such as `requests` and `urllib3`.
 
-We intend to offer Python2.7 support quite soon, along with other common libraries such as `aiohttp`, `pycurl`, etc.  
+Unmock works out of the box for most APIs that it mocks and does not
+require any additional configuration. For APIs that it does not mock
+yet, or to tweak return values from the unmock service, you can consult
+the URLs printed to the command line by unmock.
+
+We intend to offer Python2.7 support quite soon, along with other common
+libraries such as `aiohttp`, `pycurl`, etc.  
 
 ## Install
 
@@ -103,13 +112,6 @@ i.e. when you are in sandbox or development mode.
 For users of the [unmock.io](https://www.unmock.io) service, this will
 help unmock better organize your mocks in its web dashboard.
 
-### Headless usage
-
-Unmock works out of the box for most APIs that it mocks and does not
-require any additional configuration. For APIs that it does not mock
-yet, or to tweak return values from the unmock service, you can consult
-the URLs printed to the command line by unmock.
-
 ### unmock.io
 
 The URLs printed to the command line are hosted by unmock.io. You can
@@ -163,10 +165,12 @@ Note that this is *case insensitive*!
 * `story`: the story of the request, meaning its order in a series of requests
 
 Ignore evaluates regular expressions, so you can also pass
-`"headers|path"` instead of `["headers", "path"]`. Furthermore,
-to ignore nested headers, pass an object such as
-`{headers: "Authorization" }`, or to match against the value of
-a header, `{headers: { Authorization: "Bearer *" }}`.
+`"headers|path"` instead of `["headers", "path"]`. Furthermore, to
+ignore nested headers, pass a dictionary such as
+`{"headers": "Authorization" }`, or to match against the value of a
+header, `{"headers": { Authorization: "Bearer *" }}`. When using the
+ignore _method_ on the `UnmockOptions` object, you may pass either a
+list (`*args`) or a dictionary (`**kwargs`).
 
 ### Adding a signature
 
@@ -204,17 +208,9 @@ you can pass your unmock token directly to the unmock object.
 unmock.init(token="my-token")
 ```
 
-```js
-await unmock({
-  // ...
-  token: "my-token",
-  // ...
-}));
-```
-
 At a certain point this becomes a bit tedious, (even if very readable),
 at which point you will want to create a credentials file. See
-[unmock.io/docs](https://wwunmock.io/docs) for more information on
+[unmock.io/docs](https://www.unmock.io/docs) for more information on
 credential files.
 Behind the scenes, we automatically create a credentials file for you,
 for caching purposes. With this, subsequent calls to `unmock.init()`
