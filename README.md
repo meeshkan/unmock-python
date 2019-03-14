@@ -27,7 +27,6 @@ We're open to more requests - just [let us know](mailto:contact@unmock.io)!
 - [Unmock](#unmock)
   - [How does it work?](#how-does-it-work)
   - [Install](#install)
-    - [Node version support](#node-version-support)
   - [Usage](#usage)
     - [Tests](#tests)
     - [Development](#development)
