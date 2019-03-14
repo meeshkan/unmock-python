@@ -7,10 +7,10 @@ commands:
       - checkout
       - run:
           name: Setup Tools
-          command: python -m pip install --upgrade pip setuptools wheel
+          command: python3 -m pip install --upgrade pip setuptools wheel
       - run:
           name: Installing package
-          command: pip install --upgrade -e .[dev] --user
+          command: pip3 install --upgrade -e .[dev] --user
   test:
     description: "Run tests, possibly publishing results"
     parameters:
@@ -20,7 +20,7 @@ commands:
     steps:
       - run:
           name: pytest
-          command: python -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html
+          command: python3 -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html
       - when:
           condition: << parameters.publish >>
           steps:
@@ -28,13 +28,23 @@ commands:
                 path: junit
 
 jobs:
-  build:  # default entry point for CircleCI
+  build:  # default entry point for CircleCI, test against Python 3.6.8
     docker:
       - image: circleci/python:3.6.8
     steps:
     - setup
     - test:
         publish: true
+  
+  macOS36:
+    macos:
+      # https://circle-macos-docs.s3.amazonaws.com/image-manifest/build-430/index.html
+      # Python 3.6.5, Darwin 17.4.0, macOS 10.13.3
+      xcode: "9.4.1"
+    steps:
+    - setup
+    - test
+
 
   deploy:
     docker:
