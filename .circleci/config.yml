@@ -35,12 +35,27 @@ jobs:
     - setup
     - test:
         publish: true
+  linux37:  # Python 3.7.5 RC version
+    docker:
+      - image: circleci/python:3.7-rc
+    steps:
+    - setup
+    - test
   
   macOS36:
     macos:
       # https://circle-macos-docs.s3.amazonaws.com/image-manifest/build-430/index.html
       # Python 3.6.5, Darwin 17.4.0, macOS 10.13.3
       xcode: "9.4.1"
+    steps:
+    - setup
+    - test
+
+  macOS37:
+    macos:
+      # https://circle-macos-docs.s3.amazonaws.com/image-manifest/build-520/index.html
+      # Python 3.7.2, Darwin 18.2.0, macOS 10.14.3
+      xcode: "10.2.0"
     steps:
     - setup
     - test
@@ -59,9 +74,15 @@ workflows:
   build-and-deploy:
     jobs:
       - build
+      - macOS36
+      - macOS37
+      - linux37
       - deploy:
           requires:
             - build
+            - macOS36
+            - macOS37
+            - linux37
           filters:
             branches:
               only: master
