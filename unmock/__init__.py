@@ -1,15 +1,13 @@
 from .__version__ import __version__  # Conform to PEP-0396
 
 from . import pytest
-from . import flask
-from . import django
 from .core import UnmockOptions, exceptions
 
 def init(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
     """Shorthand for initialize"""
     initialize(unmock_options, story, refresh_token)
 
-def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
+def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=None) -> UnmockOptions:
     """
     Initialize the unmock library for capturing API calls.
 
@@ -29,6 +27,8 @@ def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=N
         unmock_options = UnmockOptions(token=refresh_token)
 
     core.http.initialize(unmock_options)
+
+    return unmock_options
 
 
 def reset():

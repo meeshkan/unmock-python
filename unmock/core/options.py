@@ -2,6 +2,7 @@ from typing import Union, List, Optional, Dict, Any, cast
 from urllib.parse import urlencode
 from http.client import HTTPResponse
 from http import HTTPStatus
+from pathlib import Path
 import logging
 import json
 import requests
@@ -17,7 +18,7 @@ UNMOCK_PORT = 443
 
 class UnmockOptions:
     def __init__(self, save: Union[bool, List[str]] = False, unmock_host: str = UNMOCK_HOST, unmock_port = UNMOCK_PORT,
-                 use_in_production: bool = False,
+                 use_in_production: bool = False, path: Optional[Union[str, Path]] = None,
                  logger: Optional[logging.Logger] = None, persistence: Optional[Persistence] = None,
                  ignore=None, signature: Optional[str] = None, token: Optional[str] = None,
                  whitelist: Optional[List[str]] = None):
@@ -44,15 +45,25 @@ class UnmockOptions:
         self.unmock_host = "{url}{path}{query}".format(url=uri.netloc, path=uri.path, query=uri.query)
         self.unmock_port = unmock_port
         self.use_in_production = use_in_production
-        self.ignore = ignore if ignore is not None else { "headers": r"\w*User-Agent\w*" }
+        self.ignore = ignore if ignore is not None else [{ "headers": r"\w*User-Agent\w*" }]
+        if not isinstance(self.ignore, list):
+            self.ignore = [self.ignore]
         self.signature = signature
         self.token = token
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
+        if not isinstance(self.whitelist, list):
+            self.whitelist = list(self.whitelist)
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
         if persistence is None:
-            persistence = FSPersistence(self.token)
+            persistence = FSPersistence(self.token, path=path)
         self.persistence = persistence
+
+    def ignore(self, *args, **kwargs):
+        for key in args:
+            self.ignore.append(key)
+        for key, value in kwargs:
+            self.ignore.append({key: value})
 
     def get_token(self) -> Optional[str]:
         """
