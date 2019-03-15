@@ -10,7 +10,7 @@ DESCRIPTION = 'The Unmock Python clent'
 URL = 'https://www.unmock.io/'
 EMAIL = 'dev@meeshkan.com'
 AUTHOR = 'Meeshkan Dev Team'
-REQUIRES_PYTHON = '>=3.6.0'
+REQUIRES_PYTHON = '>=2.7.0,!=3.0*,!=3.1*,!=3.2*'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
@@ -27,7 +27,7 @@ ENTRY_POINTS = []
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Import the README and use it as the long-description.
-with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(os.path.join(here, 'README.md')) as f:
     long_description = '\n' + f.read()
 
 # Load the package's __version__.py module as a dictionary.
@@ -120,7 +120,10 @@ setup(
         'Development Status :: 2 - Pre-Alpha',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Operating System :: OS Independent',
