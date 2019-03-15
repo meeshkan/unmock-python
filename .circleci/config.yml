@@ -29,7 +29,7 @@ commands:
 
 jobs:
   # Find tags here: https://circleci.com/docs/2.0/docker-image-tags.json
-  build:  # Default entry point, just see we can actually pull the contents....
+  build:  # Default entry point, just to see we can actually pull the contents....
     docker:
       - image: circleci/python:3.6.8
     steps:
@@ -128,7 +128,6 @@ workflows:
             - linux34
             - linux35
             - linux36
-            - linux37
             - linux37
           filters:
             branches:
