@@ -107,9 +107,6 @@ workflows:
       - linux27:
           requires:
             - build
-      - linux33:
-          requires:
-            - build
       - linux34:
           requires:
             - build
@@ -128,7 +125,6 @@ workflows:
             #- macOS36
             #- macOS37
             - linux27
-            - linux33
             - linux34
             - linux35
             - linux36
