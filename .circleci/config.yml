@@ -42,13 +42,6 @@ jobs:
     - setup
     - test
 
-  linux33:
-    docker:
-      - image: circleci/python:3.3
-    steps:
-    - setup
-    - test
-
   linux34:
     docker:
       - image: circleci/python:3.4

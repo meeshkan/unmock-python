@@ -10,7 +10,7 @@ DESCRIPTION = 'The Unmock Python clent'
 URL = 'https://www.unmock.io/'
 EMAIL = 'dev@meeshkan.com'
 AUTHOR = 'Meeshkan Dev Team'
-REQUIRES_PYTHON = '>=2.7.0,!=3.0*,!=3.1*,!=3.2*'
+REQUIRES_PYTHON = '>=2.7.0,!=3.0*,!=3.1*,!=3.2*,!=3.3*'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
@@ -132,7 +132,6 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
