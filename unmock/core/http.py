@@ -1,17 +1,19 @@
-from typing import Optional, List
-import http.client
+from .utils import Patchers, parse_url, is_python2
+if is_python2():
+    import httplib
+else:
+    import http.client
 import os
 
 from . import PATCHERS, STORIES
 from .options import UnmockOptions
-from .utils import Patchers, parse_url
 
 __all__ = ["initialize", "reset"]
 
 # Backup:
 UNMOCK_AUTH = "___u__n_m_o_c_k_a_u_t__h_"
 
-def initialize(unmock_options: UnmockOptions):
+def initialize(unmock_options):
     """
     Entry point to mock the standard http client. Both `urllib` and `requests` library use the
     `http.client.HTTPConnection`, so mocking it should support their use aswell.
@@ -21,12 +23,27 @@ def initialize(unmock_options: UnmockOptions):
     To save the body of the response, we also mock the HTTPResponse's `read` method.
 
     HTTPSConnection also uses the regular HTTPConnection methods under the hood -> hurray!
+
+    :param unmock_options: An UnmockOptions file with user-behaviour customizations
+    :type unmock_options UnmockOptions
     """
     token = unmock_options.get_token()  # Get the *access_token*
 
-    def unmock_putrequest(self: http.client.HTTPConnection, method, url, skip_host=False, skip_accept_encoding=False):
+    def unmock_putrequest(self, method, url, skip_host=False, skip_accept_encoding=False):
         """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
-        about the endpoint and method."""
+        about the endpoint and method.
+
+        :param self
+        :type self HTTPConnection
+        :param method
+        :type method string
+        :param url
+        :type url string
+        :param skip_host
+        :type skip_host bool
+        :param skip_accept_encoding
+        :type skip_accept_encoding bool
+        """
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
             original_putrequest(self, method, url, skip_host, skip_accept_encoding)
 
@@ -54,10 +71,17 @@ def initialize(unmock_options: UnmockOptions):
             self.__setattr__("unmock", req)
 
 
-    def unmock_putheader(self: http.client.HTTPConnection, header, *values):
+    def unmock_putheader(self, header, *values):
         """putheader mock; called sequentially after the putrequest.
         Here we simply redirect the different headers as either query parameters to be used, to part of the actual
         headers to be used to the unmock request.
+
+        :param self
+        :type self HTTPConnection
+        :param header
+        :type header string
+        :param values
+        :type values list, bytes
         """
 
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
@@ -75,15 +99,15 @@ def initialize(unmock_options: UnmockOptions):
             self.unmock.unmock_data["headers"][header] = values
 
 
-    def unmock_end_headers(self: http.client.HTTPConnection, message_body=None, *, encode_chunked=False):
-        """endheaders mock; signals the end of the HTTP request.
-        At this point we should have all the data to make the request to the unmock service.
+    def unmock_internal_end_headers(self, message_body):
         """
-
-        if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
-            # Return to avoid nesting
-            return original_endheaders(self, message_body, encode_chunked=encode_chunked)
-
+        Performs the internal operations when dealing with the endheaders request.
+        :param self:
+        :type self HTTPConnection
+        :param message_body:
+        :param message_body string
+        :return:
+        """
         # Otherwise we make the actual call to the unmock service
         unmock_data = self.unmock.unmock_data
         method = unmock_data["method"]
@@ -103,20 +127,59 @@ def initialize(unmock_options: UnmockOptions):
 
         # Save body and call original endheaders with the body message
         self.unmock.unmock_data["body"] = message_body
-        original_endheaders(self.unmock, message_body, encode_chunked=encode_chunked)
+
+    if is_python2():
+        def unmock_end_headers(self, message_body=None):
+            """endheaders mock; signals the end of the HTTP request.
+            At this point we should have all the data to make the request to the unmock service.
+
+            :param self
+            :type self HTTPConnection
+            :param message_body
+            :type message_body string
+            """
+            if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
+                # Return to avoid nesting
+                return original_endheaders(self, message_body)
+            unmock_internal_end_headers(self, message_body)
+            original_endheaders(self.unmock, message_body)
+    else:
+        def unmock_end_headers(self, message_body=None, encode_chunked=False):
+            """endheaders mock; signals the end of the HTTP request.
+            At this point we should have all the data to make the request to the unmock service.
+            NOTE: We drop the bare asterisk for Python2 compatibility.
+            See https://stackoverflow.com/questions/2965271/forced-naming-of-parameters-in-python/14298976#14298976
+
+            :param self
+            :type self HTTPConnection
+            :param message_body
+            :type message_body string
+            :param encode_chunked
+            :type encode_chunked bool
+            """
+
+            if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
+                # Return to avoid nesting
+                return original_endheaders(self, message_body, encode_chunked=encode_chunked)
+            unmock_internal_end_headers(self, message_body)
+            original_endheaders(self.unmock, message_body, encode_chunked=encode_chunked)
 
 
-    def unmock_get_response(self: http.client.HTTPConnection):
+    def unmock_get_response(self):
         """getresponse mock; fetches the response from the connection made.
         Here we just need to redirect and use the getresponse from the linked unmock connection, output some messages
         and update the stories.
+
+        :param self
+        :type self HTTPConnection
         """
         if unmock_options._is_host_whitelisted(self.host):  # Host is whitelisted, redirect to original call.
             return original_getresponse(self)
 
         elif hasattr(self, "unmock"):
             unmock_data = self.unmock.unmock_data
-            res: http.client.HTTPResponse = original_getresponse(self.unmock)  # Get unmocked response
+            # Get unmocked response
+            res = original_getresponse(self.unmock)  # type: HTTPResponse
             # Report the unmocked response, URL, and updates stories
             new_story = unmock_options._end_reporter(res=res, data=unmock_data["body"], host=self.host,
                                                      method=unmock_data["method"], path=unmock_data["path"],
@@ -129,20 +192,27 @@ def initialize(unmock_options: UnmockOptions):
     def unmock_response_read(self, amt=None):
         """HTTPResponse.read mock; helps save the body of the unmock response locally if it is so desired.
         Since TCP sockets are one-time-transport, we need to catch the read operation and use it then, so nothing is
-        missed."""
+        missed.
+
+        :param self
+        :type self HTTPResponse
+        :param amt
+        :type amt int
+        """
         s = original_response_read(self, amt)
         if hasattr(self, "unmock_hash"):  # We can now save the body of the content if it exists
             unmock_options._save_body(self.unmock_hash, s.decode())
         return s
 
     # Create the patchers and mock away!
-    original_putrequest = PATCHERS.patch("http.client.HTTPConnection.putrequest", unmock_putrequest)
-    original_putheader = PATCHERS.patch("http.client.HTTPConnection.putheader", unmock_putheader)
-    original_endheaders = PATCHERS.patch("http.client.HTTPConnection.endheaders", unmock_end_headers)
-    original_getresponse = PATCHERS.patch("http.client.HTTPConnection.getresponse", unmock_get_response)
+    lib = "httplib" if is_python2() else "http.client"
+    original_putrequest = PATCHERS.patch("{lib}.HTTPConnection.putrequest".format(lib=lib), unmock_putrequest)
+    original_putheader = PATCHERS.patch("{lib}.HTTPConnection.putheader".format(lib=lib), unmock_putheader)
+    original_endheaders = PATCHERS.patch("{lib}.HTTPConnection.endheaders".format(lib=lib), unmock_end_headers)
+    original_getresponse = PATCHERS.patch("{lib}.HTTPConnection.getresponse".format(lib=lib), unmock_get_response)
     if unmock_options.save:
         # Only patch this if we have save=True or save is a list of hashes/stories to save
-        original_response_read = PATCHERS.patch("http.client.HTTPResponse.read", unmock_response_read)
+        original_response_read = PATCHERS.patch("{lib}.HTTPResponse.read".format(lib=lib), unmock_response_read)
 
     PATCHERS.start()
 
