@@ -20,7 +20,7 @@ commands:
     steps:
       - run:
           name: pytest
-          command: python -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html #--cov-fail-under=80
+          command: python -m pytest tests -s --doctest-modules --junitxml=junit/test-results.xml --cov=unmock --cov-report=xml --cov-report=html --cov-fail-under=80
       - when:
           condition: << parameters.publish >>
           steps:
