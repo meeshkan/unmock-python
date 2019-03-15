@@ -1,7 +1,10 @@
-__all__ = ["UnmockException", "UnmockAuthorizationException"]
+__all__ = ["UnmockException", "UnmockAuthorizationException", "UnmockServerUnavailableException"]
 
 class UnmockException(Exception):
     pass
 
-class UnmockAuthorizationException(Exception):
+class UnmockAuthorizationException(UnmockException):
+    pass
+
+class UnmockServerUnavailableException(UnmockException):
     pass

@@ -3,12 +3,12 @@ from .__version__ import __version__  # Conform to PEP-0396
 from . import pytest
 from .core import UnmockOptions, exceptions
 
-def init(unmock_options: UnmockOptions = None, story=None, refresh_token=None):
+def init(unmock_options=None, story=None, refresh_token=None):
     """Shorthand for initialize"""
     initialize(unmock_options, story, refresh_token)
 
 
-def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=None) -> UnmockOptions:
+def initialize(unmock_options=None, story=None, refresh_token=None):
     """
     Initialize the unmock library for capturing API calls.
 
@@ -20,10 +20,11 @@ def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=N
     :param refresh_token: An optional unmock token identifying your account.
     :type refresh_token str
     """
-    from pathlib import Path
+
+    import os
     from . import core  # Imported internally to keep the namespace clear
-    logs_dir = Path.home().joinpath(".unmock").joinpath("logs")
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir = os.path.join(os.path.expanduser("~"), ".unmock", "logs")
+    core.makedirs(logs_dir)
     core.setup_logging(logs_dir)
 
     if story is not None:
@@ -42,5 +43,3 @@ def reset():
     """
     from . import core
     core.http.reset()
-
-del core
