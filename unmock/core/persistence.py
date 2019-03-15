@@ -192,6 +192,6 @@ class FSPersistence(Persistence):
         if self.token is not None:
             return self.token
         if os.path.exists(self.config_path):
-            iniparser = configparser.ConfigParser()
+            iniparser = configparser.ConfigParser(defaults={"token": None}, allow_no_value=True)
             iniparser.read(self.config_path)
-            return iniparser.get("unmock", "token", fallback=None)
+            return iniparser.get("unmock", "token")
