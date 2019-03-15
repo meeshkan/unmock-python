@@ -18,8 +18,16 @@ REQUIRED = ["requests", "PyYAML"]
 
 DEV = ["twine", "wheel", "pytest", "pytest-cov"]
 
-if sys.version_info[0] < 3:
-    REQUIRED.append("mock")
+# List of support packages needed based on python version used.
+# Tuple format: (version tuple, package to install)
+# The major-minor version should be the version when a package was introduced, so any older version would use the
+#   support package.
+SUPPORT = [
+    ((3, 3), "mock")  # unittest.mock was added in Python 3.3
+]
+for (ver, pkg) in SUPPORT:
+    if sys.version_info < ver:
+        REQUIRED.append(pkg)
 
 # Optional packages
 EXTRAS = {'dev': DEV}
