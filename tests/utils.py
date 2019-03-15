@@ -4,7 +4,7 @@ import multiprocessing
 try:
     import http.server as HTTPServer
 except ImportError:
-    import BaseHttpServer as HTTPServer
+    import BaseHTTPServer as HTTPServer
 
 
 LOGGER = None
