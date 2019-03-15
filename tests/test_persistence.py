@@ -1,14 +1,9 @@
 import pytest
-import tempfile
-import shutil
 from unmock.core.persistence import FSPersistence
 
 @pytest.fixture
-def prs():
-    tempdir = tempfile.mkdtemp()
-    yield FSPersistence("fake_token", path=tempdir)
-    shutil.rmtree(tempdir)
-    return
+def prs(tmpdir):
+    return FSPersistence("fake_token", path=tmpdir)
 
 def test_correct_body_no_headers(prs):
 

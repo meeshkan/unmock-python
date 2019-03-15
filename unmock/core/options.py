@@ -19,7 +19,7 @@ except ImportError:
 from .utils import parse_url
 from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
-from .exceptions import UnmockAuthorizationException
+from .exceptions import UnmockAuthorizationException, UnmockServerUnavailableException
 
 __all__ = ["UnmockOptions"]
 
@@ -77,8 +77,7 @@ class UnmockOptions:
 
         """
         if logger is None:
-            if storage_path is not None:
-                setup_logging(storage_path)
+            setup_logging(storage_path)
             logger = logging.getLogger("unmock.reporter")
         self.logger = logger
         self.save = save
@@ -95,7 +94,7 @@ class UnmockOptions:
         self.token = token
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
         if not isinstance(self.whitelist, list):
-            self.whitelist = list(self.whitelist)
+            self.whitelist = [self.whitelist]
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
         if persistence is None:
@@ -116,7 +115,6 @@ class UnmockOptions:
         Fetches and returns a new access token from the unmock server or predisposed access token if it is still valid.
         Throws RuntimeError on logical failures with unexpected responses from the Unmock host.
         """
-        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
         access_token = self.persistence.load_auth()
         if access_token is not None:  # If we already have an access token, let's see we can still ping with it
             if self._validate_access_token(access_token):  # We can ping, all's good in the world!
@@ -126,6 +124,8 @@ class UnmockOptions:
         refresh_token = self.persistence.load_token()
         if refresh_token is None:
             return  # Continue with the public API ('/y/' version)
+
+        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
         response = requests.post("{url}/token/access".format(url=url), json={"refreshToken": refresh_token})
         if response.status_code == HTTPStatus.OK:
             new_access_token = response.json().get("accessToken")
@@ -150,7 +150,7 @@ class UnmockOptions:
             response = requests.get("{url}".format(url=url),
                                     headers={"Authorization": "Bearer {token}".format(token=access_token)})
         except requests.ConnectionError:
-            raise UnmockAuthorizationException("The server {url} is unavailable!".format(url=url))
+            raise UnmockServerUnavailableException("The server {url} is unavailable!".format(url=url))
         return response.status_code == HTTPStatus.OK
 
 

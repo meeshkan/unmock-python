@@ -7,8 +7,26 @@ except ImportError:
 
 from .utils import get_logger
 
+# Tests that actually send through to the unmock service and make sure it's all formed correctly
+
 URL = "https://www.behance.net/v2/projects"
 API = "?api_key=u_n_m_o_c_k_200"
+
+
+def test_no_credentials_no_signature(unmock_and_reset):
+    unmock_and_reset(**{"token": None})
+    response = requests.get("http://www.example.com/")  # Nothing here anyway
+    assert response.json()
+
+
+def test_no_credentials_with_signature(unmock_and_reset):
+    opts = unmock_and_reset(**{"signature": "boom", "token": None})
+    assert opts.persistence.token is None
+    response = requests.get("{url}{api}".format(url=URL, api=API))
+    projects = response.json().get("projects")
+    assert projects
+    assert isinstance(projects[0]["id"], int)
+
 
 def test_hubspot(unmock_and_reset):
     unmock_and_reset()
