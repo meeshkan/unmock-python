@@ -10,13 +10,24 @@ DESCRIPTION = 'The Unmock Python clent'
 URL = 'https://www.unmock.io/'
 EMAIL = 'dev@meeshkan.com'
 AUTHOR = 'Meeshkan Dev Team'
-REQUIRES_PYTHON = '>=3.6.0'
+REQUIRES_PYTHON = '>=2.7.0,!=3.0*,!=3.1*,!=3.2*,!=3.3*'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
 REQUIRED = ["requests", "PyYAML"]
 
 DEV = ["twine", "wheel", "pytest", "pytest-cov"]
+
+# List of support packages needed based on python version used.
+# Tuple format: (version tuple, package to install)
+# The major-minor version should be the version when a package was introduced, so any older version would use the
+#   support package.
+SUPPORT = [
+    ((3, 3), "mock")  # unittest.mock was added in Python 3.3
+]
+for (ver, pkg) in SUPPORT:
+    if sys.version_info < ver:
+        REQUIRED.append(pkg)
 
 # Optional packages
 EXTRAS = {'dev': DEV}
@@ -27,7 +38,7 @@ ENTRY_POINTS = []
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Import the README and use it as the long-description.
-with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(os.path.join(here, 'README.md')) as f:
     long_description = '\n' + f.read()
 
 # Load the package's __version__.py module as a dictionary.
@@ -117,10 +128,12 @@ setup(
     include_package_data=True,
     license='Apache 2.0',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'License :: OSI Approved :: Apache Software License',
+        'Development Status :: 3 - Alpha',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Operating System :: OS Independent',
