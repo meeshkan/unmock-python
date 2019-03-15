@@ -1,15 +1,22 @@
-from urllib.parse import urlencode
-from http.client import HTTPResponse
-from http import HTTPStatus
-from pathlib import Path
 import logging
 import json
 import requests
 import fnmatch
 
+from .utils import parse_url, is_python2
+
+if is_python2():
+    from httplib import HTTPResponse
+    from urllib import urlencode
+    class HTTPStatus:
+        OK = 200
+else:
+    from urllib.parse import urlencode
+    from http.client import HTTPResponse
+    from http import HTTPStatus
+
 from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
-from .utils import parse_url
 from .exceptions import UnmockAuthorizationException
 
 __all__ = ["UnmockOptions"]
@@ -126,7 +133,7 @@ class UnmockOptions:
         raise UnmockAuthorizationException("Internal authorization error, receieved {response} from"
                                            " {url}".format(response=response.status_code, url=self.unmock_host))
 
-    def _validate_access_token(self):
+    def _validate_access_token(self, access_token):
         """
         Validates the access token by pinging the unmock_host with the Authorization header
         :param access_token:
@@ -155,9 +162,25 @@ class UnmockOptions:
     def _xy(xy):
         return "/x/" if xy else "/y/"
 
-    def _build_query(self, story: Optional[List[str]],  headers: Dict[str, Any], host: Optional[str] = None,
-                     method: Optional[str] = None, path: Optional[str] = None):
-        """Builds the querypath for unmock requests"""
+    def _build_query(self, story,  headers, host=None, method=None, path=None):
+        """
+        Builds the query path for unmock requests.
+        :param story: A list stories hashes used with unmock (for statefulness).
+        :type story list
+
+        :param headers: A dictionary (with strings as keys) describing the original request headers
+        :type headers dictionary
+
+        :param host: An optional string stating the original request host
+        :type host string
+
+        :param method: An optional string stating the original request method
+        :type method string
+
+        :param path: An optional string with the original request path
+        :type path string
+        :return: The query path (string)
+        """
         qs = {
             "story": json.dumps(story),
             "path": path or "",
@@ -171,17 +194,24 @@ class UnmockOptions:
             qs["signature"] = self.signature
         return urlencode(qs)
 
-    def _end_reporter(self, res: HTTPResponse, data: Any, host: str, method: str, path: str, story: List[str], xy: str):
+    def _end_reporter(self, res, data, host, method, path, story, xy):
         """
         Reports the capture of an API call, possibly storing the headers in the relevant directory for unmock (if
         persistence layer is activated via `save` parameter).
         :param res: The actual response object from Unmock service
+        :type res HTTPResponse
         :param data: The data sent to the unmock server (the body sent)
+        :type data string
         :param host: The original host the request was directed to
+        :type host string
         :param method: The original method for the request
+        :type method string
         :param path: The original path requested from the original host (including query parameters)
+        :type path string
         :param story: The list of current stories used and stored in Unmock
+        :type story list
         :param xy: string representing whether or not this request is public ('/y/') or private ('/x/')
+        :type xy string
         :return: A new story if we have not encountered this story before.
         """
         unmock_hash = res.getheader("unmock-hash", default=None)
@@ -195,6 +225,13 @@ class UnmockOptions:
                 self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
             return unmock_hash
 
-    def _save_body(self, unmock_hash, body: Optional[str] = None):
+    def _save_body(self, unmock_hash, body=None):
+        """
+        Saves the given body in the relevant story hash folder
+        :param unmock_hash: A story hash
+        :type string
+        :param body: The response body (chunked or full), defaults to None
+        :type string
+        """
         if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
             self.persistence.save_body(hash=unmock_hash, body=body)
