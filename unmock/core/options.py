@@ -88,9 +88,9 @@ class UnmockOptions:
         self.unmock_host = "{url}{path}{query}".format(url=uri.netloc, path=uri.path, query=uri.query)
         self.unmock_port = unmock_port
         self.use_in_production = use_in_production
-        self.ignore = ignore if ignore is not None else [{ "headers": r"\w*User-Agent\w*" }]
-        if not isinstance(self.ignore, list):
-            self.ignore = [self.ignore]
+        self._ignore = ignore if ignore is not None else [{ "headers": r"\w*User-Agent\w*" }]
+        if not isinstance(self._ignore, list):
+            self._ignore = [self._ignore]
         self.signature = signature
         self.token = token
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
@@ -107,9 +107,9 @@ class UnmockOptions:
 
     def ignore(self, *args, **kwargs):
         for key in args:
-            self.ignore.append(key)
+            self._ignore.append(key)
         for key, value in kwargs:
-            self.ignore.append({key: value})
+            self._ignore.append({key: value})
 
     def get_token(self):
         """
@@ -196,8 +196,8 @@ class UnmockOptions:
             "method": method or "",
             "headers": json.dumps(headers)
         }
-        if self.ignore is not None:
-            qs["ignore"] = json.dumps(self.ignore)
+        if self._ignore is not None:
+            qs["ignore"] = json.dumps(self._ignore)
         if self.signature is not None:
             qs["signature"] = self.signature
         return urlencode(qs)
