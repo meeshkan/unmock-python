@@ -1,10 +1,17 @@
-from typing import List, Dict, Any, Union
-from collections.abc import Iterable
+import sys
 import json
-from urllib.parse import urlsplit, SplitResult
-from unittest import mock
 
-__all__ = ["Patchers", "parse_url"]
+def is_python2():
+    return sys.version_info[0] < 3
+
+if is_python2():
+    from urlparse import urlsplit, SplitResult
+    import mock
+else:
+    from urllib.parse import urlsplit, SplitResult
+    from unittest import mock
+
+__all__ = ["Patchers", "parse_url", "is_python2"]
 
 class Patchers:
     """Represents a collection of mock.patcher objects to be started/stopped simulatenously."""
@@ -42,7 +49,8 @@ class Patchers:
         for patcher in self.patchers:
             patcher.stop()
 
-def parse_url(url) -> SplitResult:
+def parse_url(url):
+    """Parses a url using urlsplit, returning a SplitResult. Adds https:// scheme if netloc is empty."""
     parsed_url = urlsplit(url)
     if parsed_url.scheme == "" or parsed_url.netloc == "":
         # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")

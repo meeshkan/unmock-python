@@ -1,4 +1,3 @@
-from typing import Union, List, Optional, Dict, Any, cast
 from urllib.parse import urlencode
 from http.client import HTTPResponse
 from http import HTTPStatus
@@ -7,6 +6,7 @@ import logging
 import json
 import requests
 
+from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
 from .utils import parse_url
 from .exceptions import UnmockAuthorizationException
@@ -17,12 +17,58 @@ UNMOCK_HOST = "api.unmock.io"
 UNMOCK_PORT = 443
 
 class UnmockOptions:
-    def __init__(self, save: Union[bool, List[str]] = False, unmock_host: str = UNMOCK_HOST, unmock_port = UNMOCK_PORT,
-                 use_in_production: bool = False, path: Optional[Union[str, Path]] = None,
-                 logger: Optional[logging.Logger] = None, persistence: Optional[Persistence] = None,
-                 ignore=None, signature: Optional[str] = None, token: Optional[str] = None,
-                 whitelist: Optional[List[str]] = None):
+    def __init__(self, save=False, unmock_host=UNMOCK_HOST, unmock_port=UNMOCK_PORT, use_in_production=False,
+                 storage_path=None, logger=None, persistence=None, ignore=None, signature=None, token=None,
+                 whitelist=None):
+        """
+        Creates a new UnmockOptions object, customizing the use of Unmock service
+        :param save: whether or not to save all mocks (when using boolean value), or a list of specific story IDs to
+            save. Deafult to False.
+        :type save boolean, list of strings
+
+        :param unmock_host: The URL for unmock host, if it is on prem. Default to api.unmock.io
+        :type unmock_host string
+
+        :param unmock_port: The port for unmock host, if it s on prem. Default to 443.
+        :type unmock_port int
+
+        :param use_in_production: Whether or not to use unmock in production, based on `ENV` environment variable.
+            Default to False.
+        :type use_in_production boolean
+
+        :param storage_path: Location where mocks (and credentials, etc) should be stored. Creates a hidden `.unmock`
+            directory in that location to store relevant data. Only relevant when saving some of the data.
+            Default to None (uses home directory).
+        :type storage_path string
+
+        :param logger: A logger file if a user wants to redirect/manage logs in that non-default way. Defaults to a
+            console logger, with `info.log` and `debug.log` in a logs directory located in the storage_path.
+        :type logger logging.Logger
+
+        :param persistence: A type of persistence layer, can be used to e.g. save mocks automatically to S3 buckets or
+            on local disk. Defaults to None and uses file system to store credentials, mocks (if save is defined), etc.
+        :type persistence Persistence
+
+        :param ignore: A string, list, dictionary or a combination of them, specifying different parameters to ignore
+            when serving mocks. See the documentation for more details.
+        :type string, list, dictionary, any
+
+        :param signature: An optional signature allowing a user to have specific mocks for different purposes.
+            The signature is used when computing the story hash; see the documentation for more details.
+        :type string
+
+        :param token: An optional refresh token, given when you sign up to the unmock service. With a valid token, you
+            can have unlimited calls to the unmock service, an online dashboard, private mocks, etc.
+        :type string
+
+        :param whitelist: An optional list (or string) of URLs to whitelist, so that you may access them without unmock
+            intercepting the calls. Defaults to ["127.0.0.1", "127.0.0.0", "localhost"]
+        :type string, list of strings
+
+        """
         if logger is None:
+            if storage_path is not None:
+                setup_logging(storage_path)
             logger = logging.getLogger("unmock.reporter")
         self.logger = logger
         self.save = save
@@ -43,7 +89,7 @@ class UnmockOptions:
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
         if persistence is None:
-            persistence = FSPersistence(self.token, path=path)
+            persistence = FSPersistence(self.token, path=storage_path)
         self.persistence = persistence
 
     def ignore(self, *args, **kwargs):

@@ -1,42 +1,90 @@
-from typing import Dict, Optional, Union, Any
-from abc import ABC, abstractmethod
-from pathlib import Path
+from abc import ABCMeta, abstractmethod
 import json
-import configparser
+import os
+from .utils import is_python2
+if is_python2():
+    import ConfigParser as configparser
+else:
+    import configparser
 
 __all__ = ["FSPersistence", "Persistence"]
 
-class Persistence(ABC):
+class Persistence:
     """Defines a high-level interface-like abstract class"""
+    __metaclass__ = ABCMeta
     def __init__(self, token):
+        """
+        Initializes the persistence layer.
+        :param token: A refresh token to be used
+        :type token string
+        """
         self.token = token  # Token is only ever saved in memory, everything else is up to the implementation
 
     @abstractmethod
-    def save_headers(self, hash: str, headers: Optional[Dict[str, Any]] = None) -> None:
+    def save_headers(self, hash, headers=None):
+        """
+        Saves given headers in the persistence layer.
+        :param hash: A story hash
+        :type hash string
+        :param headers: A dictionary of strings as keys and anything serializable as values. Default is None.
+        """
         pass
 
     @abstractmethod
-    def save_body(self, hash: str, body: Optional[Union[Dict[str, Any], str]] = None) -> None:
+    def save_body(self, hash, body=None):
+        """
+        Saves the given body in the persistence layer.
+        :param hash: A story hash
+        :type hash string
+        :param body: A string or a dictionary of strings as keys and anything serializable as values. Default is None.
+        """
         pass
 
     @abstractmethod
-    def save_auth(self, auth: str) -> None:
+    def save_auth(self, auth):
+        """
+        Saves an access token in the persistence layer.
+        :param auth: Access token
+        :type auth string
+        """
         pass
 
     @abstractmethod
-    def load_headers(self, hash: str) -> Optional[Dict[str, Any]]:
+    def load_headers(self, hash):
+        """
+        Loads the headers for the matching story hash and returns them.
+        :param hash: A story hash
+        :type hash string
+        :return: A dictionary with strings as keys and anything serializable as values.
+            None if story hash can't be found or headers could not be loaded.
+        """
         pass
 
     @abstractmethod
-    def load_body(self, hash: str) -> Optional[Dict[str, Any]]:
+    def load_body(self, hash):
+        """
+        Loads the body for the matching story hash and returns it.
+        :param hash: A story hash
+        :type hash string
+        :return: A dictionary with strings as keys and anything serializable as values.
+            None if story hash can't be found or body could not be loaded.
+        """
         pass
 
     @abstractmethod
     def load_auth(self) -> Optional[str]:
+        """
+        Loads and returns the access token from the persistence layer.
+        :return: A string (the access token) if it is found, otherwise None.
+        """
         pass
 
     @abstractmethod
     def load_token(self) -> Optional[str]:
+        """
+        Loads and returns the refresh token from the persistence layer.
+        :return: A string (the refresh token) if it was given when initializing the persistence layer, otherwise None.
+        """
         pass
 
 
@@ -46,11 +94,11 @@ class FSPersistence(Persistence):
     BODY_FILE = "response.json"
 
     def __init__(self, token, path=None):
-        super().__init__(token)
+        super(FSPersistence, self).__init__(token)
         self.homepath = Path(path or Path.home()).absolute()  # Given directory or home path
         self.unmock_dir.mkdir(parents=True, exist_ok=True)  # Create home directory if needed
-        # Maps unmock hashes to partial json body, when body is read in chunks
-        self.partial_body_jsons: Dict[str, str] = dict()
+        # Maps unmock hashes (string) to partial json body (string), when body is read in chunks
+        self.partial_body_jsons = dict()
 
     @property
     def unmock_dir(self):

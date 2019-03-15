@@ -18,6 +18,9 @@ REQUIRED = ["requests", "PyYAML"]
 
 DEV = ["twine", "wheel", "pytest", "pytest-cov"]
 
+if sys.version_info[0] < 3:
+    REQUIRED.append("mock")
+
 # Optional packages
 EXTRAS = {'dev': DEV}
 
