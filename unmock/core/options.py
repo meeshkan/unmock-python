@@ -5,6 +5,7 @@ from pathlib import Path
 import logging
 import json
 import requests
+import fnmatch
 
 from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
@@ -98,9 +99,9 @@ class UnmockOptions:
         for key, value in kwargs:
             self.ignore.append({key: value})
 
-    def get_token(self) -> Optional[str]:
+    def get_token(self):
         """
-        Fetches a new access token from the unmock server or predisposed access token if it is still valid.
+        Fetches and returns a new access token from the unmock server or predisposed access token if it is still valid.
         Throws RuntimeError on logical failures with unexpected responses from the Unmock host.
         """
         url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
@@ -125,10 +126,11 @@ class UnmockOptions:
         raise UnmockAuthorizationException("Internal authorization error, receieved {response} from"
                                            " {url}".format(response=response.status_code, url=self.unmock_host))
 
-    def _validate_access_token(self, access_token: str) -> bool:
+    def _validate_access_token(self):
         """
         Validates the access token by pinging the unmock_host with the Authorization header
         :param access_token:
+        :type access_token string
         :return: True if token is valid, False otherwise
         """
         url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
@@ -137,8 +139,17 @@ class UnmockOptions:
         return response.status_code == HTTPStatus.OK
 
 
-    def _is_host_whitelisted(self, host: str):
-        return host in self.whitelist
+    def _is_host_whitelisted(self, host):
+        """
+        Checks if given host is whitelisted
+        :param host: String representing a host
+        :type host string
+        :return: True if host is whitelisted, False otherwise
+        """
+        for whitelisted in self.whitelist:
+            if fnmatch.fnmatch(host, whitelisted):  # Whitelisted can be a wildcard string (e.g. "*.amazon.com/...")
+                return True
+        return False
 
     @staticmethod
     def _xy(xy):
