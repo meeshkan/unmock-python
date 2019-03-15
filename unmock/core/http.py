@@ -51,7 +51,10 @@ def initialize(unmock_options):
             # Otherwise, we create our own HTTPSConnection to redirect the call to our service when needed.
             # We add the "unmock" attribute to this object and store information for later use.
             uri = parse_url(url)
-            req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
+            if is_python2():
+                req = httplib.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
+            else:
+                req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
             """
             By order:
             - headers_qp -> contains header information that is used in *q*uery *p*arameters
@@ -60,15 +63,15 @@ def initialize(unmock_options):
             - headers -> actual headers to send to the unmock API
             - method -> actual method to use with the unmock API (always matches the method for the original request)
             """
-            req.__setattr__("unmock_data", { "headers_qp": dict(),
-                                             "path": "{path}?{query}".format(path=uri.path, query=uri.query),
-                                             "story": STORIES,
-                                             "headers": dict(),
-                                             "method": method })
+            setattr(req, "unmock_data", { "headers_qp": dict(),
+                                          "path": "{path}?{query}".format(path=uri.path, query=uri.query),
+                                          "story": STORIES,
+                                          "headers": dict(),
+                                          "method": method })
             if token is not None:  # Add token to official headers
                 # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
                 req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
-            self.__setattr__("unmock", req)
+            setattr(self, "unmock", req)
 
 
     def unmock_putheader(self, header, *values):
@@ -186,7 +189,7 @@ def initialize(unmock_options):
                                                      story=STORIES, xy=unmock_options._xy(token))
             if new_story is not None:
                 STORIES.append(new_story)
-                res.__setattr__("unmock_hash", new_story)  # So we know the story the response belongs to
+                setattr(res, "unmock_hash", new_story)  # So we know the story the response belongs to
             return res
 
     def unmock_response_read(self, amt=None):
