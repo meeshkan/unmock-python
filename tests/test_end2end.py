@@ -1,4 +1,3 @@
-import os
 import requests
 
 try:
@@ -6,13 +5,13 @@ try:
 except ImportError:
     import mock
 
-import unmock
-from .utils import get_logger, unmock_and_reset
+from .utils import get_logger
 
 URL = "https://www.behance.net/v2/projects"
 API = "?api_key=u_n_m_o_c_k_200"
 
 def test_hubspot(unmock_and_reset):
+    unmock_and_reset()
     response = requests.get("{url}{api}".format(url=URL, api=API))
     projects = response.json().get("projects")
     assert projects, "Expecting a non-empty list of 'projects' in response"
@@ -28,6 +27,7 @@ def test_hubspot(unmock_and_reset):
 
 
 def test_hubapi(unmock_and_reset):
+    unmock_and_reset()
     json_data = {
         "properties": [
             {
@@ -47,17 +47,19 @@ def test_hubapi(unmock_and_reset):
 
 
 def test_no_story(unmock_and_reset):
-    unmock_and_reset.ignore("story")  # Adds story to ignore list
-    unmock_and_reset.save = True
-    mocked_save_content = mock.MagicMock()
-    unmock_and_reset.persistence.save_headers = mocked_save_content
-    unmock_and_reset.persistence.save_body = mocked_save_content
+    # Adds story to ignore list
+    opts = unmock_and_reset(**{"ignore": "story", "save": True})
+    mocked_save_headers = mock.MagicMock()
+    mocked_save_body = mock.MagicMock()
+    opts.persistence.save_headers = mocked_save_headers
+    opts.persistence.save_body = mocked_save_body
     for _ in range(3):
         response = requests.get("{url}{api}".format(url=URL, api=API))
         projects = response.json().get("projects")
         assert projects
         assert isinstance(projects[0]["id"], int)
     # Expected to be called once for the first header, then hash is identical
-    assert mocked_save_content.call_count == 1
+    assert mocked_save_headers.call_count == 1
+    assert mocked_save_body.call_count == 1
 
 

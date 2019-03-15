@@ -85,4 +85,3 @@ def test_token(prs):
     with open(prs.config_path, 'w') as cnfgfd:
         cnfgfd.writelines(["[unmock]\ntoken=nekot\n"])
     assert prs.load_token() == "nekot"
-    

@@ -183,13 +183,11 @@ def initialize(unmock_options):
             unmock_data = conn.unmock.unmock_data
             # Get unmocked response
             res = original_getresponse(conn.unmock)  # type: HTTPResponse
-            # Report the unmocked response, URL, and updates stories
+            # Report the unmocked response, URL
             new_story = unmock_options._end_reporter(res=res, data=unmock_data["body"], host=conn.host,
                                                      method=unmock_data["method"], path=unmock_data["path"],
                                                      story=STORIES, xy=unmock_options._xy(token))
-            if new_story is not None:
-                STORIES.append(new_story)
-                setattr(res, "unmock_hash", new_story)  # So we know the story the response belongs to
+            setattr(res, "unmock_hash", new_story)  # So we know the story the response belongs to
             return res
 
     def unmock_response_read(res, amt=None):
@@ -204,7 +202,11 @@ def initialize(unmock_options):
         """
         s = original_response_read(res, amt)
         if hasattr(res, "unmock_hash"):  # We can now save the body of the content if it exists
-            unmock_options._save_body(res.unmock_hash, str(s.decode()))  # str() to transform from Python2's unicode
+            # Report and store the stories...
+            # str() to transform from Python2's unicode
+            new_story = unmock_options._save_body(unmock_hash=res.unmock_hash, story=STORIES, body=str(s.decode()))
+            if new_story is not None:
+                STORIES.append(new_story)
         return s
 
     # Create the patchers and mock away!

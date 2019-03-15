@@ -233,13 +233,17 @@ class UnmockOptions:
                 self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
             return unmock_hash
 
-    def _save_body(self, unmock_hash, body=None):
+    def _save_body(self, unmock_hash, story, body=None):
         """
         Saves the given body in the relevant story hash folder
         :param unmock_hash: A story hash
         :type string
+        :param story: The list of current stories used and stored in Unmock
+        :type story list
         :param body: The response body (chunked or full), defaults to None
         :type string
         """
-        if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-            self.persistence.save_body(hash=unmock_hash, body=body)
+        if unmock_hash is not None and unmock_hash not in story:
+            if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
+                self.persistence.save_body(hash=unmock_hash, body=body)
+            return unmock_hash
