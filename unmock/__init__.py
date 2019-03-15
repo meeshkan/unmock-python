@@ -24,10 +24,7 @@ def initialize(unmock_options=None, story=None, refresh_token=None):
     import os
     from . import core  # Imported internally to keep the namespace clear
     logs_dir = os.path.join(os.path.expanduser("~"), ".unmock", "logs")
-    try:
-        os.makedirs(os.path.logs_dir)
-    except OSError:
-        pass  # Directory already exists...
+    core.makedirs(logs_dir)
     core.setup_logging(logs_dir)
 
     if story is not None:

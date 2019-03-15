@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 import json
 import os
-from .utils import is_python2
+
+from .utils import is_python2, makedirs
 if is_python2():
     import ConfigParser as configparser
 else:
@@ -72,7 +73,7 @@ class Persistence:
         pass
 
     @abstractmethod
-    def load_auth(self) -> Optional[str]:
+    def load_auth(self):
         """
         Loads and returns the access token from the persistence layer.
         :return: A string (the access token) if it is found, otherwise None.
@@ -80,7 +81,7 @@ class Persistence:
         pass
 
     @abstractmethod
-    def load_token(self) -> Optional[str]:
+    def load_token(self):
         """
         Loads and returns the refresh token from the persistence layer.
         :return: A string (the refresh token) if it was given when initializing the persistence layer, otherwise None.
@@ -95,49 +96,66 @@ class FSPersistence(Persistence):
 
     def __init__(self, token, path=None):
         super(FSPersistence, self).__init__(token)
-        self.homepath = Path(path or Path.home()).absolute()  # Given directory or home path
+        self.homepath = os.path.abspath(path or os.path.expanduser("~"))  # Given directory or home path
         self.unmock_dir.mkdir(parents=True, exist_ok=True)  # Create home directory if needed
         # Maps unmock hashes (string) to partial json body (string), when body is read in chunks
         self.partial_body_jsons = dict()
 
     @property
     def unmock_dir(self):
-        return self.homepath.joinpath(".unmock")
+        return os.path.join(self.homepath, ".unmock")
 
     @property
     def token_path(self):
-        return self.unmock_dir.joinpath(".token")
+        return os.path.join(self.unmock_dir, ".token")
 
     @property
     def config_path(self):
-        return self.unmock_dir.joinpath("credentials")
+        return os.path.join(self.unmock_dir, "credentials")
 
     @property
     def hash_dir(self):
-        return self.unmock_dir.joinpath("save")
+        return os.path.join(self.unmock_dir, "save")
 
-    def __outdir(self, hash: str) -> Path:
-        hashdir = self.hash_dir.joinpath(hash)
-        hashdir.mkdir(parents=True, exist_ok=True)
+    def __outdir(self, hash):
+        hashdir = os.path.join(self.hash_dir, hash)
+        makedirs(hashdir)
         return hashdir
 
-    def __write_to_hashed(self, hash: str, filename: str, content: Optional[Union[Dict[str, Any], str]]):
+    def __write_to_hashed(self, hash, filename, content):
+        """
+        Writes given content to the given filename, to be located in the relevant hash directory
+        :param hash: A story hash
+        :type hash string
+        :param filename: The filename to use when saving
+        :type filename string
+        :param content: An optional serializable content (string or dictionary with string as keys)
+        :type dictionary, string
+        """
         if content is not None:
-            with self.__outdir(hash).joinpath(filename).open('w') as fp:
+            with open(os.path.join(self.__outdir(hash), filename), 'w') as fp:
                 json.dump(content, fp, indent=2)
                 fp.flush()
 
-    def __load_from_hashed(self, hash: str, filename: str) -> Optional[Union[Dict[str, Any], str]]:
+    def __load_from_hashed(self, hash, filename):
+        """
+        Attempts to load content from the filename located as the hash directory
+        :param hash: A story hash
+        :type hash string
+        :param filename: The filename to read from
+        :type filename string
+        :return: The decoded content from filename if successful, None otherwise
+        """
         try:
-            with self.__outdir(hash).joinpath(filename).open() as fp:
+            with open(os.path.join(self.__outdir(hash), filename)) as fp:
                 return json.load(fp)
         except (json.JSONDecodeError, OSError):  # Raise on other errors
             return None
 
-    def save_headers(self, hash: str, headers: Optional[Dict[str, Any]] = None) -> None:
+    def save_headers(self, hash, headers=None):
         self.__write_to_hashed(hash=hash, filename=FSPersistence.HEADERS_FILE, content=headers)
 
-    def save_body(self, hash: str, body: Optional[Union[Dict[str, Any], str]] = None) -> None:
+    def save_body(self, hash, body=None):
         if isinstance(body, str):
             # Attempt to load back from JSON string to object for dumping to file
             # If unsuccessful, save it as a partial result
@@ -152,24 +170,27 @@ class FSPersistence(Persistence):
                 body = None  # Failed! Don't access disk just yet...
         self.__write_to_hashed(hash=hash, filename=FSPersistence.BODY_FILE, content=body)
 
-    def save_auth(self, auth: str) -> None:
-        with self.token_path.open('w') as tknfd:
+    def save_auth(self, auth):
+        with open(self.token_path, 'w') as tknfd:
             tknfd.write(auth)
             tknfd.flush()
 
-    def load_headers(self, hash: str) -> Optional[Dict[str, Any]]:
+    def load_headers(self, hash):
         return self.__load_from_hashed(hash, FSPersistence.HEADERS_FILE)
 
-    def load_body(self, hash: str) -> Optional[Dict[str, Any]]:
+    def load_body(self, hash):
         return self.__load_from_hashed(hash, FSPersistence.BODY_FILE)
 
-    def load_auth(self) -> Optional[str]:
-        return self.token_path.read_text() if self.token_path.exists() else None
+    def load_auth(self):
+        if os.path.exists(self.token_path):
+            with open(self.token_path) as tknfd:
+                return tknfd.read()
+        return None
 
-    def load_token(self) -> Optional[str]:
+    def load_token(self):
         if self.token is not None:
             return self.token
-        if self.config_path.exists():
+        if os.path.exists(self.config_path):
             iniparser = configparser.ConfigParser()
             iniparser.read(self.config_path)
             return iniparser.get("unmock", "token", fallback=None)

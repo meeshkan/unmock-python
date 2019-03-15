@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 
 def is_python2():
@@ -11,7 +12,7 @@ else:
     from urllib.parse import urlsplit, SplitResult
     from unittest import mock
 
-__all__ = ["Patchers", "parse_url", "is_python2"]
+__all__ = ["Patchers", "parse_url", "is_python2", "makedirs"]
 
 class Patchers:
     """Represents a collection of mock.patcher objects to be started/stopped simulatenously."""
@@ -56,3 +57,10 @@ def parse_url(url):
         # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
         return urlsplit("https://{url}".format(url=url))
     return parsed_url
+
+def makedirs(path):
+    """Quiet makedirs (similar to Python3 ok_exists=True flag)"""
+    try:
+        os.makedirs(path)
+    except OSError:
+        pass
