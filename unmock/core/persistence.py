@@ -97,7 +97,7 @@ class FSPersistence(Persistence):
     def __init__(self, token, path=None):
         super(FSPersistence, self).__init__(token)
         self.homepath = os.path.abspath(path or os.path.expanduser("~"))  # Given directory or home path
-        self.unmock_dir.mkdir(parents=True, exist_ok=True)  # Create home directory if needed
+        makedirs(self.unmock_dir)  # Create home directory if needed
         # Maps unmock hashes (string) to partial json body (string), when body is read in chunks
         self.partial_body_jsons = dict()
 

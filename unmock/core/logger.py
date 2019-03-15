@@ -22,6 +22,6 @@ def setup_logging(logs_dir, log_config=LOG_CONFIG_FILE):
     for handler_name in config['handlers'].keys():
         handler_config = config['handlers'][handler_name]
         if 'filename' in handler_config:
-            handler_config['filename'] = os.path.joinpath(logs_dir, handler_config['filename'])
+            handler_config['filename'] = os.path.join(logs_dir, handler_config['filename'])
 
     logging.config.dictConfig(config)

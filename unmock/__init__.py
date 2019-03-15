@@ -43,5 +43,3 @@ def reset():
     """
     from . import core
     core.http.reset()
-
-del core
