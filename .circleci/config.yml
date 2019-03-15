@@ -30,6 +30,8 @@ commands:
 jobs:
   # Find tags here: https://circleci.com/docs/2.0/docker-image-tags.json
   build:  # Default entry point, just see we can actually pull the contents....
+    docker:
+      - image: circleci/python:3.6.8
     steps:
     - checkout
 
@@ -93,7 +95,6 @@ jobs:
     steps:
     - setup
     - test
-
 
   deploy:
     docker:
