@@ -23,8 +23,7 @@ class UnmockOptions:
                  ignore=None, signature: Optional[str] = None, token: Optional[str] = None,
                  whitelist: Optional[List[str]] = None):
         if logger is None:
-            logger = logging.getLogger("Unmock Reporter")
-            logger.setLevel(logging.DEBUG)
+            logger = logging.getLogger("unmock.reporter")
         self.logger = logger
         self.save = save
 

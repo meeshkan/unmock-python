@@ -6,7 +6,7 @@ import yaml
 
 __all__ = ["setup_logging"]
 
-LOG_CONFIG_FILE = Path("logging.yaml").absolute()
+LOG_CONFIG_FILE = Path(__file__).absolute().parent.joinpath("logging.yaml")
 
 def setup_logging(logs_dir: Path, log_config: Path = LOG_CONFIG_FILE):
     """Setup logging configuration

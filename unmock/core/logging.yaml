@@ -29,6 +29,7 @@ handlers:
     formatter: simple
     stream: ext://sys.stdout
 
-root:
-  level: WARNING  # All loggers to be WARNING by default
-  handlers: [debug_file_handler, info_file_handler, console]
+loggers:
+  unmock:
+    level: DEBUG  # All loggers to be WARNING by default
+    handlers: [debug_file_handler, info_file_handler, console]

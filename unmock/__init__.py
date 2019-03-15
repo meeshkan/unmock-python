@@ -22,7 +22,7 @@ def initialize(unmock_options: UnmockOptions = None, story=None, refresh_token=N
     """
     from pathlib import Path
     from . import core  # Imported internally to keep the namespace clear
-    logs_dir = logs_dir=Path.home().joinpath(".unmock").joinpath("logs")
+    logs_dir = Path.home().joinpath(".unmock").joinpath("logs")
     logs_dir.mkdir(parents=True, exist_ok=True)
     core.setup_logging(logs_dir)
 
