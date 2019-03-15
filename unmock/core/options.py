@@ -2,19 +2,21 @@ import logging
 import json
 import requests
 import fnmatch
-
-from .utils import parse_url, is_python2
-
-if is_python2():
-    from httplib import HTTPResponse
+try:
+    from urllib.parse import urlencode
+except ImportError:
     from urllib import urlencode
+try:
+    from http.client import HTTPResponse
+except ImportError:
+    from httplib import HTTPResponse
+try:
+    from http import HTTPStatus
+except ImportError:
     class HTTPStatus:
         OK = 200
-else:
-    from urllib.parse import urlencode
-    from http.client import HTTPResponse
-    from http import HTTPStatus
 
+from .utils import parse_url
 from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
 from .exceptions import UnmockAuthorizationException
@@ -100,6 +102,9 @@ class UnmockOptions:
             persistence = FSPersistence(self.token, path=storage_path)
         self.persistence = persistence
 
+        # If possible - get an access token, check server is available, etc.
+        self.get_token()
+
     def ignore(self, *args, **kwargs):
         for key in args:
             self.ignore.append(key)
@@ -140,9 +145,12 @@ class UnmockOptions:
         :type access_token string
         :return: True if token is valid, False otherwise
         """
-        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
-        response = requests.get("{url}/ping".format(url=url),
-                                headers={"Authorization": "Bearer {token}".format(token=access_token)})
+        url = "{scheme}://{host}:{port}/ping".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
+        try:
+            response = requests.get("{url}".format(url=url),
+                                    headers={"Authorization": "Bearer {token}".format(token=access_token)})
+        except requests.ConnectionError:
+            raise UnmockAuthorizationException("The server {url} is unavailable!".format(url=url))
         return response.status_code == HTTPStatus.OK
 
 

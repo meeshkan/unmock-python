@@ -1,12 +1,13 @@
 from abc import ABCMeta, abstractmethod
 import json
 import os
-
-from .utils import is_python2, makedirs
-if is_python2():
-    import ConfigParser as configparser
-else:
+try:
     import configparser
+except ImportError:
+    import ConfigParser as configparser
+    json.JSONDecodeError = ValueError  # Python 2.7's json throws ValueError and has not JSONDecodeError
+
+from .utils import makedirs
 
 __all__ = ["FSPersistence", "Persistence"]
 

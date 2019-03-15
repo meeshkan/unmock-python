@@ -1,8 +1,8 @@
 from .utils import Patchers, parse_url, is_python2
-if is_python2():
-    import httplib
-else:
+try:
     import http.client
+except ImportError:
+    import httplib
 import os
 
 from . import PATCHERS, STORIES
@@ -204,7 +204,7 @@ def initialize(unmock_options):
         """
         s = original_response_read(self, amt)
         if hasattr(self, "unmock_hash"):  # We can now save the body of the content if it exists
-            unmock_options._save_body(self.unmock_hash, s.decode())
+            unmock_options._save_body(self.unmock_hash, str(s.decode()))
         return s
 
     # Create the patchers and mock away!
@@ -221,4 +221,4 @@ def initialize(unmock_options):
 
 def reset():
     PATCHERS.clear()
-    STORIES.clear()
+    del STORIES[:]

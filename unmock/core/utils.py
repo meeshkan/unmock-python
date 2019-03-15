@@ -1,18 +1,20 @@
 import sys
 import os
 import json
-
-def is_python2():
-    return sys.version_info[0] < 3
-
-if is_python2():
-    from urlparse import urlsplit, SplitResult
-    import mock
-else:
+try:
     from urllib.parse import urlsplit, SplitResult
+except ImportError:
+    from urlparse import urlsplit, SplitResult
+try:
     from unittest import mock
+except ImportError:
+    import mock
 
 __all__ = ["Patchers", "parse_url", "is_python2", "makedirs"]
+
+def is_python2():
+    """ Recommended way to import is with try-except; this shorthand is made for where we're not importing modules. """
+    return sys.version_info[0] < 3
 
 class Patchers:
     """Represents a collection of mock.patcher objects to be started/stopped simulatenously."""
@@ -37,8 +39,8 @@ class Patchers:
         """Stop any ongoing patches and clears the list of patchers in this instance"""
         if self.patchers:
             self.stop()
-        self.patchers.clear()
-        self.targets.clear()
+        del self.patchers[:]
+        del self.targets[:]
 
     def start(self):
         """Starts all registered patchers"""
