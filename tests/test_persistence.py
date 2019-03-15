@@ -1,19 +1,11 @@
 import pytest
 import tempfile
-from pathlib import Path
 import shutil
-from typing import Dict, Any
 from unmock.core.persistence import FSPersistence
 
-@pytest.fixture
-def redirect_home_path():
-    FSPersistence.HOMEPATH = Path(tempfile.mkdtemp())
-    yield None
-    shutil.rmtree(FSPersistence.HOMEPATH)
 
-
-def test_correct_body_no_headers(redirect_home_path):
-    prs = FSPersistence("fake_token")
+def test_correct_body_no_headers():
+    prs = FSPersistence("fake_token", path=tempfile.mkdtemp())
     prs.save_body(hash="abc", body='{'
                     '"data": ['
                         '{'
