@@ -16,7 +16,7 @@ SRC_DIR = 'unmock'  # Relative location wrt setup.py
 # Required packages.
 REQUIRED = ["requests", "PyYAML"]
 
-DEV = ["twine", "wheel", "pytest", "pytest-cov"]
+DEV = ["twine", "wheel", "pytest"]
 
 # List of support packages needed based on python version used.
 # Tuple format: (version tuple, package to install)

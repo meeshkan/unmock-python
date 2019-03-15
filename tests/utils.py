@@ -14,7 +14,7 @@ def get_logger():
     global LOGGER
     if LOGGER is None:
         LOGGER = logging.getLogger("tests.unmock")
-        LOGGER.setLevel(logging.DEBUG)
+        LOGGER.setLevel(logging.WARNING)
         frmtr = logging.Formatter("[%(asctime)s] %(levelname)s\\%(name)s:\t%(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(frmtr)

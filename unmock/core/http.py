@@ -52,9 +52,11 @@ def initialize(unmock_options):
             # We add the "unmock" attribute to this object and store information for later use.
             uri = parse_url(url)
             if is_python2():
-                req = httplib.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
+                req = httplib.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
+                                              timeout=conn.timeout)
             else:
-                req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
+                req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
+                                                  timeout=conn.timeout)
             # unmock_data dictionary items explained:
             # - headers_qp -> contains header information that is used in *q*uery *p*arameters
             # - path -> stores the endpoint for the request
