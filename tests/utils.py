@@ -1,4 +1,5 @@
 import logging
+import pytest
 
 LOGGER = None
 
@@ -13,3 +14,11 @@ def get_logger():
         console_handler.setFormatter(frmtr)
         LOGGER.addHandler(console_handler)
     return LOGGER
+
+@pytest.fixture
+def unmock_and_reset():
+    opts = unmock.UnmockOptions(token=os.environ.get("UNMOCK_TOKEN"), logger=get_logger())
+    unmock.init(opts)
+    yield opts
+    unmock.reset()
+    return

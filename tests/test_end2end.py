@@ -1,6 +1,5 @@
 import os
 import requests
-import pytest
 
 try:
     from unittest import mock
@@ -8,17 +7,7 @@ except ImportError:
     import mock
 
 import unmock
-from .utils import get_logger
-
-# End-to-end testing
-
-@pytest.fixture
-def unmock_and_reset():
-    opts = unmock.UnmockOptions(token=os.environ.get("UNMOCK_TOKEN"), logger=get_logger())
-    unmock.init(opts)
-    yield opts
-    unmock.reset()
-    return
+from .utils import get_logger, unmock_and_reset
 
 URL = "https://www.behance.net/v2/projects"
 API = "?api_key=u_n_m_o_c_k_200"
