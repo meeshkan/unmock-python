@@ -1,5 +1,6 @@
 # [Unmock](https://www.unmock.io/) (Python SDK)
-[![CircleCI](https://circleci.com/gh/unmock/unmock-python.svg?style=svg)](https://circleci.com/gh/unmock/unmock-python)
+[![CircleCI](https://circleci.com/gh/unmock/unmock-python.svg?style=shield)](https://circleci.com/gh/unmock/unmock-python) 
+[![codecov](https://codecov.io/gh/unmock/unmock-python/branch/dev/graph/badge.svg)](https://codecov.io/gh/unmock/unmock-python)
 
 Public API mocking for Python.
 

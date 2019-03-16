@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  codecov: codecov/codecov@1.0.4
+
 commands:
   setup:
     description: "Installs python packages and source module"
@@ -23,6 +26,7 @@ commands:
           command: |
             coverage run --source unmock -m pytest --junitxml=junit/test-results.xml
             coverage html --fail-under=80
+            coverage xml
       - when:
           condition: << parameters.publish >>
           steps:
@@ -30,6 +34,7 @@ commands:
                 path: junit
             - store_artifacts:
                 path: htmlcov
+            - codecov/upload
 
 jobs:
   # Find tags here: https://circleci.com/docs/2.0/docker-image-tags.json
@@ -38,7 +43,8 @@ jobs:
       - image: circleci/python:2.7.16
     steps:
     - setup
-    - test
+    - test:
+        publish: true
 
   linux34:
     docker:
