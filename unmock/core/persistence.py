@@ -1,13 +1,14 @@
 from abc import ABCMeta, abstractmethod
 import json
 import os
+from .utils import makedirs, is_python_version_at_least
 try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
-    json.JSONDecodeError = ValueError  # Python 2.7's json throws ValueError and has not JSONDecodeError
+if not is_python_version_at_least("3.5"):
+    json.JSONDecodeError = ValueError  # JSONDecodeError was introduced in Python3.5, before it would throw ValueError
 
-from .utils import makedirs
 
 __all__ = ["FSPersistence", "Persistence"]
 
@@ -150,7 +151,11 @@ class FSPersistence(Persistence):
         try:
             with open(os.path.join(self.__outdir(hash), filename)) as fp:
                 return json.load(fp)
-        except (json.JSONDecodeError, OSError):  # Raise on other errors
+        except (json.JSONDecodeError, OSError, IOError):
+            # JSONDecode when it fails decoding content
+            # OSError is for when the file is not found on Python3
+            # IOError for when file is not found on Python2
+            # Raise on other errors
             return None
 
     def save_headers(self, hash, headers=None):

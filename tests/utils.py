@@ -6,7 +6,6 @@ try:
 except ImportError:
     import BaseHTTPServer as HTTPServer
 
-
 LOGGER = None
 
 def get_logger():
@@ -20,6 +19,14 @@ def get_logger():
         console_handler.setFormatter(frmtr)
         LOGGER.addHandler(console_handler)
     return LOGGER
+
+
+def is_text(text):
+    """Checks whether text is string/unicode (Python 2/3 compatibility)"""
+    try:
+        return isinstance(text, (unicode, str))
+    except NameError:
+        return isinstance(text, str)
 
 
 def one_hit_server():
