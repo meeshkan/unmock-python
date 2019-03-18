@@ -1,9 +1,9 @@
-from .utils import Patchers, parse_url, is_python2
+import os
+from .utils import Patchers, parse_url, is_python_version_at_least
 try:
     import http.client
 except ImportError:
     import httplib
-import os
 
 from . import PATCHERS, STORIES
 from .options import UnmockOptions
@@ -51,10 +51,12 @@ def initialize(unmock_options):
             # Otherwise, we create our own HTTPSConnection to redirect the call to our service when needed.
             # We add the "unmock" attribute to this object and store information for later use.
             uri = parse_url(url)
-            if is_python2():
-                req = httplib.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
+            if is_python_version_at_least("3.3"):
+                req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
+                                                  timeout=conn.timeout)
             else:
-                req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port)
+                req = httplib.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
+                                              timeout=conn.timeout)
             # unmock_data dictionary items explained:
             # - headers_qp -> contains header information that is used in *q*uery *p*arameters
             # - path -> stores the endpoint for the request
@@ -129,24 +131,7 @@ def initialize(unmock_options):
         # Save body and call original endheaders with the body message
         conn.unmock.unmock_data["body"] = message_body
 
-    # HTTPResponse.end_headers signature has been changed between Python 2.7 and Python 3.4+, we need to account for it
-    # when mocking
-    if is_python2():
-        def unmock_end_headers(conn, message_body=None):
-            """endheaders mock; signals the end of the HTTP request.
-            At this point we should have all the data to make the request to the unmock service.
-
-            :param conn
-            :type conn HTTPConnection
-            :param message_body
-            :type message_body string
-            """
-            if unmock_options._is_host_whitelisted(conn.host):  # Host is whitelisted, redirect to original call.
-                # Return to avoid nesting
-                return original_endheaders(conn, message_body)
-            unmock_internal_end_headers(conn, message_body)
-            original_endheaders(conn.unmock, message_body)
-    else:
+    if is_python_version_at_least("3.6"):  # The encode_chunked parameters was added in Python 3.6
         def unmock_end_headers(conn, message_body=None, encode_chunked=False):
             """endheaders mock; signals the end of the HTTP request.
             At this point we should have all the data to make the request to the unmock service.
@@ -166,6 +151,21 @@ def initialize(unmock_options):
                 return original_endheaders(conn, message_body, encode_chunked=encode_chunked)
             unmock_internal_end_headers(conn, message_body)
             original_endheaders(conn.unmock, message_body, encode_chunked=encode_chunked)
+    else:
+        def unmock_end_headers(conn, message_body=None):
+            """endheaders mock; signals the end of the HTTP request.
+            At this point we should have all the data to make the request to the unmock service.
+
+            :param conn
+            :type conn HTTPConnection
+            :param message_body
+            :type message_body string
+            """
+            if unmock_options._is_host_whitelisted(conn.host):  # Host is whitelisted, redirect to original call.
+                # Return to avoid nesting
+                return original_endheaders(conn, message_body)
+            unmock_internal_end_headers(conn, message_body)
+            original_endheaders(conn.unmock, message_body)
 
 
     def unmock_get_response(conn):
@@ -183,13 +183,11 @@ def initialize(unmock_options):
             unmock_data = conn.unmock.unmock_data
             # Get unmocked response
             res = original_getresponse(conn.unmock)  # type: HTTPResponse
-            # Report the unmocked response, URL, and updates stories
+            # Report the unmocked response, URL
             new_story = unmock_options._end_reporter(res=res, data=unmock_data["body"], host=conn.host,
                                                      method=unmock_data["method"], path=unmock_data["path"],
                                                      story=STORIES, xy=unmock_options._xy(token))
-            if new_story is not None:
-                STORIES.append(new_story)
-                setattr(res, "unmock_hash", new_story)  # So we know the story the response belongs to
+            setattr(res, "unmock_hash", new_story)  # So we know the story the response belongs to
             return res
 
     def unmock_response_read(res, amt=None):
@@ -204,11 +202,15 @@ def initialize(unmock_options):
         """
         s = original_response_read(res, amt)
         if hasattr(res, "unmock_hash"):  # We can now save the body of the content if it exists
-            unmock_options._save_body(res.unmock_hash, str(s.decode()))  # str() to transform from Python2's unicode
+            # Report and store the stories...
+            # str() to transform from Python2's unicode
+            new_story = unmock_options._save_body(unmock_hash=res.unmock_hash, story=STORIES, body=str(s.decode()))
+            if new_story is not None:
+                STORIES.append(new_story)
         return s
 
     # Create the patchers and mock away!
-    lib = "httplib" if is_python2() else "http.client"
+    lib = "http.client" if is_python_version_at_least("3.3") else "httplib"
     original_putrequest = PATCHERS.patch("{lib}.HTTPConnection.putrequest".format(lib=lib), unmock_putrequest)
     original_putheader = PATCHERS.patch("{lib}.HTTPConnection.putheader".format(lib=lib), unmock_putheader)
     original_endheaders = PATCHERS.patch("{lib}.HTTPConnection.endheaders".format(lib=lib), unmock_end_headers)

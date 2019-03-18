@@ -10,11 +10,17 @@ try:
 except ImportError:
     import mock
 
-__all__ = ["Patchers", "parse_url", "is_python2", "makedirs"]
+__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs"]
 
-def is_python2():
-    """ Recommended way to import is with try-except; this shorthand is made for where we're not importing modules. """
-    return sys.version_info[0] < 3
+def is_python_version_at_least(version):
+    """
+    Checks if the current python version is at least the version specified.
+    Recommended way to import is with try-except; this shorthand is made for where we're not importing modules.
+    :param version: A string representing desired python version (e.g. "3.6.8")
+    :type version string
+    :return: boolean value whether the current python version is at least the given version
+    """
+    return sys.version_info >= tuple(int(v) for v in version.split("."))
 
 class Patchers:
     """Represents a collection of mock.patcher objects to be started/stopped simulatenously."""

@@ -19,7 +19,7 @@ except ImportError:
 from .utils import parse_url
 from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
-from .exceptions import UnmockAuthorizationException
+from .exceptions import UnmockAuthorizationException, UnmockServerUnavailableException
 
 __all__ = ["UnmockOptions"]
 
@@ -77,8 +77,7 @@ class UnmockOptions:
 
         """
         if logger is None:
-            if storage_path is not None:
-                setup_logging(storage_path)
+            setup_logging(storage_path)
             logger = logging.getLogger("unmock.reporter")
         self.logger = logger
         self.save = save
@@ -88,14 +87,14 @@ class UnmockOptions:
         self.unmock_host = "{url}{path}{query}".format(url=uri.netloc, path=uri.path, query=uri.query)
         self.unmock_port = unmock_port
         self.use_in_production = use_in_production
-        self.ignore = ignore if ignore is not None else [{ "headers": r"\w*User-Agent\w*" }]
-        if not isinstance(self.ignore, list):
-            self.ignore = [self.ignore]
+        self._ignore = ignore if ignore is not None else [{ "headers": r"\w*User-Agent\w*" }]
+        if not isinstance(self._ignore, list):
+            self._ignore = [self._ignore]
         self.signature = signature
         self.token = token
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
         if not isinstance(self.whitelist, list):
-            self.whitelist = list(self.whitelist)
+            self.whitelist = [self.whitelist]
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
         if persistence is None:
@@ -107,16 +106,15 @@ class UnmockOptions:
 
     def ignore(self, *args, **kwargs):
         for key in args:
-            self.ignore.append(key)
+            self._ignore.append(key)
         for key, value in kwargs:
-            self.ignore.append({key: value})
+            self._ignore.append({key: value})
 
     def get_token(self):
         """
         Fetches and returns a new access token from the unmock server or predisposed access token if it is still valid.
         Throws RuntimeError on logical failures with unexpected responses from the Unmock host.
         """
-        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
         access_token = self.persistence.load_auth()
         if access_token is not None:  # If we already have an access token, let's see we can still ping with it
             if self._validate_access_token(access_token):  # We can ping, all's good in the world!
@@ -126,6 +124,8 @@ class UnmockOptions:
         refresh_token = self.persistence.load_token()
         if refresh_token is None:
             return  # Continue with the public API ('/y/' version)
+
+        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
         response = requests.post("{url}/token/access".format(url=url), json={"refreshToken": refresh_token})
         if response.status_code == HTTPStatus.OK:
             new_access_token = response.json().get("accessToken")
@@ -150,7 +150,7 @@ class UnmockOptions:
             response = requests.get("{url}".format(url=url),
                                     headers={"Authorization": "Bearer {token}".format(token=access_token)})
         except requests.ConnectionError:
-            raise UnmockAuthorizationException("The server {url} is unavailable!".format(url=url))
+            raise UnmockServerUnavailableException("The server {url} is unavailable!".format(url=url))
         return response.status_code == HTTPStatus.OK
 
 
@@ -196,8 +196,8 @@ class UnmockOptions:
             "method": method or "",
             "headers": json.dumps(headers)
         }
-        if self.ignore is not None:
-            qs["ignore"] = json.dumps(self.ignore)
+        if self._ignore is not None:
+            qs["ignore"] = json.dumps(self._ignore)
         if self.signature is not None:
             qs["signature"] = self.signature
         return urlencode(qs)
@@ -233,13 +233,17 @@ class UnmockOptions:
                 self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
             return unmock_hash
 
-    def _save_body(self, unmock_hash, body=None):
+    def _save_body(self, unmock_hash, story, body=None):
         """
         Saves the given body in the relevant story hash folder
         :param unmock_hash: A story hash
         :type string
+        :param story: The list of current stories used and stored in Unmock
+        :type story list
         :param body: The response body (chunked or full), defaults to None
         :type string
         """
-        if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-            self.persistence.save_body(hash=unmock_hash, body=body)
+        if unmock_hash is not None and unmock_hash not in story:
+            if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
+                self.persistence.save_body(hash=unmock_hash, body=body)
+            return unmock_hash
