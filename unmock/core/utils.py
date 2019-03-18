@@ -1,10 +1,7 @@
 import sys
 import os
 import json
-try:
-    from urllib.parse import urlsplit, SplitResult
-except ImportError:
-    from urlparse import urlsplit, SplitResult
+from six.moves.urllib.parse import urlsplit, SplitResult
 try:
     from unittest import mock
 except ImportError:
