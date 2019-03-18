@@ -40,8 +40,7 @@ commands:
                 path: junit
             - store_artifacts:
                 path: htmlcov
-            - codecov/upload:
-                conf: codecov.yml
+            - codecov/upload
 
 jobs:
   # Find tags here: https://circleci.com/docs/2.0/docker-image-tags.json
