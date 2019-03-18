@@ -116,7 +116,7 @@ class FSPersistence(Persistence):
     def hash_dir(self):
         return os.path.join(self.unmock_dir, "save")
 
-    def __outdir(self, hash):
+    def _outdir(self, hash):
         hashdir = os.path.join(self.hash_dir, hash)
         makedirs(hashdir)
         return hashdir
@@ -132,7 +132,7 @@ class FSPersistence(Persistence):
         :type dictionary, string
         """
         if content is not None:
-            with open(os.path.join(self.__outdir(hash), filename), 'w') as fp:
+            with open(os.path.join(self._outdir(hash), filename), 'w') as fp:
                 json.dump(content, fp, indent=2)
                 fp.flush()
 
@@ -146,7 +146,7 @@ class FSPersistence(Persistence):
         :return: The decoded content from filename if successful, None otherwise
         """
         try:
-            with open(os.path.join(self.__outdir(hash), filename)) as fp:
+            with open(os.path.join(self._outdir(hash), filename)) as fp:
                 return json.load(fp)
         except (json.JSONDecodeError, OSError, IOError):
             # JSONDecode when it fails decoding content

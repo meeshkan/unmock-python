@@ -12,6 +12,16 @@ TIMEOUT = 10
 URL = "https://www.behance.net/v2/projects"
 API = "?api_key=u_n_m_o_c_k_200"
 
+def test_pytest_default(unmock):
+    response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
+    assert response.json()
+
+
+def test_pytest_init(unmock, tmpdir):
+    unmock(storage_path=tmpdir, save=True)
+    response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
+    assert response.json()
+
 
 def test_no_credentials_no_signature(unmock_and_reset):
     unmock_and_reset(**{"token": None})

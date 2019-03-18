@@ -224,6 +224,7 @@ class UnmockOptions:
             self.logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
                              unmock_hash)
             if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
+                self.logger.info("Mocked data was also saved locally at %s", self.persistence._outdir(unmock_hash))
                 self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
             return unmock_hash
 
