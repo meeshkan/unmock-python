@@ -2,10 +2,7 @@ from abc import ABCMeta, abstractmethod
 import json
 import os
 from .utils import makedirs, is_python_version_at_least
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+from six.moves import configparser
 if not is_python_version_at_least("3.5"):
     json.JSONDecodeError = ValueError  # JSONDecodeError was introduced in Python3.5, before it would throw ValueError
 

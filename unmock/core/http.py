@@ -1,10 +1,6 @@
 import os
 from .utils import Patchers, parse_url, is_python_version_at_least
-try:
-    import http.client
-except ImportError:
-    import httplib
-
+from six.moves import http_client
 from . import PATCHERS, STORIES
 from .options import UnmockOptions
 
@@ -51,11 +47,7 @@ def initialize(unmock_options):
             # Otherwise, we create our own HTTPSConnection to redirect the call to our service when needed.
             # We add the "unmock" attribute to this object and store information for later use.
             uri = parse_url(url)
-            if is_python_version_at_least("3.3"):
-                req = http.client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
-                                                  timeout=conn.timeout)
-            else:
-                req = httplib.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
+            req = http_client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
                                               timeout=conn.timeout)
             # unmock_data dictionary items explained:
             # - headers_qp -> contains header information that is used in *q*uery *p*arameters
@@ -210,14 +202,13 @@ def initialize(unmock_options):
         return s
 
     # Create the patchers and mock away!
-    lib = "http.client" if is_python_version_at_least("3.3") else "httplib"
-    original_putrequest = PATCHERS.patch("{lib}.HTTPConnection.putrequest".format(lib=lib), unmock_putrequest)
-    original_putheader = PATCHERS.patch("{lib}.HTTPConnection.putheader".format(lib=lib), unmock_putheader)
-    original_endheaders = PATCHERS.patch("{lib}.HTTPConnection.endheaders".format(lib=lib), unmock_end_headers)
-    original_getresponse = PATCHERS.patch("{lib}.HTTPConnection.getresponse".format(lib=lib), unmock_get_response)
+    original_putrequest = PATCHERS.patch("six.moves.http_client.HTTPConnection.putrequest", unmock_putrequest)
+    original_putheader = PATCHERS.patch("six.moves.http_client.HTTPConnection.putheader", unmock_putheader)
+    original_endheaders = PATCHERS.patch("six.moves.http_client.HTTPConnection.endheaders", unmock_end_headers)
+    original_getresponse = PATCHERS.patch("six.moves.http_client.HTTPConnection.getresponse", unmock_get_response)
     if unmock_options.save:
         # Only patch this if we have save=True or save is a list of hashes/stories to save
-        original_response_read = PATCHERS.patch("{lib}.HTTPResponse.read".format(lib=lib), unmock_response_read)
+        original_response_read = PATCHERS.patch("six.moves.http_client.HTTPResponse.read", unmock_response_read)
 
     PATCHERS.start()
 

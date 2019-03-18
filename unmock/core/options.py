@@ -2,14 +2,8 @@ import logging
 import json
 import requests
 import fnmatch
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-try:
-    from http.client import HTTPResponse
-except ImportError:
-    from httplib import HTTPResponse
+from six.moves.urllib.parse import urlencode
+from six.moves import http_client
 try:
     from http import HTTPStatus
 except ImportError:
@@ -207,7 +201,7 @@ class UnmockOptions:
         Reports the capture of an API call, possibly storing the headers in the relevant directory for unmock (if
         persistence layer is activated via `save` parameter).
         :param res: The actual response object from Unmock service
-        :type res HTTPResponse
+        :type res http_client.HTTPResponse
         :param data: The data sent to the unmock server (the body sent)
         :type data string
         :param host: The original host the request was directed to
