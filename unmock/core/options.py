@@ -22,7 +22,7 @@ UNMOCK_PORT = 443
 
 class UnmockOptions:
     def __init__(self, save=False, unmock_host=UNMOCK_HOST, unmock_port=UNMOCK_PORT, use_in_production=False,
-                 storage_path=None, logger=None, persistence=None, ignore=None, signature=None, token=None,
+                 storage_path=None, logger=None, persistence=None, ignore=None, signature=None, refresh_token=None,
                  whitelist=None):
         """
         Creates a new UnmockOptions object, customizing the use of Unmock service
@@ -73,26 +73,35 @@ class UnmockOptions:
         if logger is None:
             setup_logging(storage_path)
             logger = logging.getLogger("unmock.reporter")
-        self.logger = logger
-        self.save = save
 
-        uri = parse_url(unmock_host)
-        self.scheme = uri.scheme
-        self.unmock_host = "{url}{path}{query}".format(url=uri.netloc, path=uri.path, query=uri.query)
-        self.unmock_port = unmock_port
-        self.use_in_production = use_in_production
-        self._ignore = ignore if ignore is not None else [{ "headers": r"\w*User-Agent\w*" }]
+        #
+        # The following variables are "hidden" from user, so the namespace is clearer
+        #
+
+        self._logger = logger
+        self._ignore = ignore if ignore is not None else [{"headers": r"\w*User-Agent\w*"}]
         if not isinstance(self._ignore, list):
             self._ignore = [self._ignore]
+
+        uri = parse_url(unmock_host)
+        self._scheme = uri.scheme
+        self._unmock_host = "{url}{path}{query}".format(url=uri.netloc, path=uri.path, query=uri.query)
+        self._unmock_port = unmock_port
+
+        #
+        # The following variables are "in plain sight" for the user, free for their use
+        #
+
+        self.use_in_production = use_in_production
+        self.save = save
         self.signature = signature
-        self.token = token
         self.whitelist = whitelist if whitelist is not None else ["127.0.0.1", "127.0.0.0", "localhost"]
         if not isinstance(self.whitelist, list):
             self.whitelist = [self.whitelist]
         # Add the unmock host to whitelist:
         self.whitelist.append(unmock_host)
         if persistence is None:
-            persistence = FSPersistence(self.token, path=storage_path)
+            persistence = FSPersistence(refresh_token, path=storage_path)
         self.persistence = persistence
 
         # If possible - get an access token, check server is available, etc.
@@ -119,8 +128,8 @@ class UnmockOptions:
         if refresh_token is None:
             return  # Continue with the public API ('/y/' version)
 
-        url = "{scheme}://{host}:{port}".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
-        response = requests.post("{url}/token/access".format(url=url), json={"refreshToken": refresh_token})
+        url = self._url("token", "access")
+        response = requests.post(url, json={"refreshToken": refresh_token})
         if response.status_code == HTTPStatus.OK:
             new_access_token = response.json().get("accessToken")
             if new_access_token is None:  # Response was not present..?
@@ -130,7 +139,14 @@ class UnmockOptions:
             self.persistence.save_auth(new_access_token)
             return new_access_token
         raise UnmockAuthorizationException("Internal authorization error, receieved {response} from"
-                                           " {url}".format(response=response.status_code, url=self.unmock_host))
+                                           " {url}".format(response=response.status_code, url=self._unmock_host))
+
+    def _url(self, *paths):
+        base_url = "{scheme}://{host}:{port}".format(scheme=self._scheme, host=self._unmock_host,
+                                                     port=self._unmock_port)
+        for path in paths:
+            base_url = "{url}/{path}".format(url=base_url, path=path)
+        return base_url
 
     def _validate_access_token(self, access_token):
         """
@@ -139,10 +155,9 @@ class UnmockOptions:
         :type access_token string
         :return: True if token is valid, False otherwise
         """
-        url = "{scheme}://{host}:{port}/ping".format(scheme=self.scheme, host=self.unmock_host, port=self.unmock_port)
+        url = self._url("ping")
         try:
-            response = requests.get("{url}".format(url=url),
-                                    headers={"Authorization": "Bearer {token}".format(token=access_token)})
+            response = requests.get(url, headers={"Authorization": "Bearer {token}".format(token=access_token)})
         except requests.ConnectionError:
             raise UnmockServerUnavailableException("The server {url} is unavailable!".format(url=url))
         return response.status_code == HTTPStatus.OK
@@ -218,13 +233,13 @@ class UnmockOptions:
         """
         unmock_hash = res.getheader("unmock-hash", default=None)
         if unmock_hash is not None and unmock_hash not in story:
-            self.logger.info("*****url-called*****")
+            self._logger.info("*****url-called*****")
             data_string = " with data {data}".format(data=data) if data is not None else "."
-            self.logger.info("Hi! We see you've called %s %s%s%s", method, host, path, data_string)
-            self.logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
-                             unmock_hash)
+            self._logger.info("Hi! We see you've called %s %s%s%s", method, host, path, data_string)
+            self._logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
+                              unmock_hash)
             if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-                self.logger.info("Mocked data was also saved locally at %s", self.persistence._outdir(unmock_hash))
+                self._logger.info("Mocked data was also saved locally at %s", self.persistence._outdir(unmock_hash))
                 self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
             return unmock_hash
 

@@ -10,5 +10,5 @@ from .http import *
 from .logger import *
 from . import exceptions
 
-__all__ = ["initialize", "reset", "UnmockOptions", "exceptions"]
+__all__ = ["initialize", "reset", "exceptions"]
 

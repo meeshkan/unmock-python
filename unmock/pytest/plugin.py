@@ -5,10 +5,8 @@ from .. import init, reset, UnmockOptions
 @pytest.fixture
 def unmock():
     def _init(**kwargs):
-        opts = UnmockOptions(**kwargs)
         reset()
-        init(opts)
-        return opts
+        return init(**kwargs)
     init()
     yield _init
     reset()
