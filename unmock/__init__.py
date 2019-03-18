@@ -68,3 +68,11 @@ def reset():
     """
     from . import core
     core.http.reset()
+
+
+def is_mocking():
+    """
+    Returns whether or not unmock is currently capturing calls
+    """
+    from . import core
+    return len(core.PATCHERS.targets) > 0

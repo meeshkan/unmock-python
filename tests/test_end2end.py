@@ -12,17 +12,6 @@ TIMEOUT = 10
 URL = "https://www.behance.net/v2/projects"
 API = "?api_key=u_n_m_o_c_k_200"
 
-def test_pytest_default(unmock):
-    response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
-    assert response.json()
-
-
-def test_pytest_init(unmock, tmpdir):
-    unmock(storage_path=tmpdir, save=True)
-    response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
-    assert response.json()
-
-
 def test_no_credentials_no_signature(unmock_and_reset):
     unmock_and_reset(refresh_token=None)
     response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
@@ -76,7 +65,7 @@ def test_hubapi(unmock_and_reset):
 
 def test_no_story(unmock_and_reset):
     # Adds story to ignore list
-    opts = unmock_and_reset(**{"ignore": "story", "save": True})
+    opts = unmock_and_reset(ignore="story", save=True)
     mocked_save_headers = mock.MagicMock()
     mocked_save_body = mock.MagicMock()
     opts.persistence.save_headers = mocked_save_headers

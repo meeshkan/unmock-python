@@ -24,9 +24,15 @@ commands:
       - run:
           name: Pytest
           command: |
-            coverage run --source unmock -m pytest --junitxml=junit/test-results.xml
+            coverage run --source unmock -m pytest --junitxml=junit/test-results.xml --ignore-glob=*/plugin_test.py
             coverage html --fail-under=80
             coverage xml
+      - run:
+          name: Pytest Plugin
+          command: |
+            pytest tests/plugin_text.py
+            USE_UNMOCK=True pytest tests/plugin_text.py || echo "Failed successfully!"
+            USE_UNMOCK=True pytest tests/plugin_text.py --unmock
       - when:
           condition: << parameters.publish >>
           steps:
