@@ -2,7 +2,7 @@ from .utils import *  # Imported first as it defines the Patchers object
 
 # package-wide variables to be used by different capturers of API calls (whether it is http, flask, django, whatever)
 PATCHERS = Patchers()
-STORIES = list()
+STORIES = list()  # TODO - should this be a set?
 
 from .persistence import *
 from .options import *

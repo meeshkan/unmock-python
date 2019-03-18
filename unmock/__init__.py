@@ -5,7 +5,7 @@ from .core import UnmockOptions, exceptions
 
 def init(unmock_options=None, story=None, refresh_token=None):
     """Shorthand for initialize"""
-    initialize(unmock_options, story, refresh_token)
+    return initialize(unmock_options, story, refresh_token)
 
 
 def initialize(unmock_options=None, story=None, refresh_token=None):
@@ -21,12 +21,7 @@ def initialize(unmock_options=None, story=None, refresh_token=None):
     :type refresh_token str
     """
 
-    import os
     from . import core  # Imported internally to keep the namespace clear
-    logs_dir = os.path.join(os.path.expanduser("~"), ".unmock", "logs")
-    core.makedirs(logs_dir)
-    core.setup_logging(logs_dir)
-
     if story is not None:
         core.STORIES += story
     if unmock_options is None:  # Default then!
