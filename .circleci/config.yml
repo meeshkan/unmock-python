@@ -30,9 +30,9 @@ commands:
       - run:
           name: Pytest Plugin
           command: |
-            pytest tests/plugin_text.py
-            USE_UNMOCK=True pytest tests/plugin_text.py || echo "Failed successfully!"
-            USE_UNMOCK=True pytest tests/plugin_text.py --unmock
+            pytest tests/plugin_test.py
+            USE_UNMOCK=True pytest tests/plugin_test.py || echo "Failed successfully!"
+            USE_UNMOCK=True pytest tests/plugin_test.py --unmock
       - when:
           condition: << parameters.publish >>
           steps:
