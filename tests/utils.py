@@ -1,10 +1,7 @@
 import os
 import logging
 import multiprocessing
-try:
-    import http.server as HTTPServer
-except ImportError:
-    import BaseHTTPServer as HTTPServer
+from six.moves import BaseHTTPServer
 
 LOGGER = None
 
@@ -31,12 +28,12 @@ def is_text(text):
 
 def one_hit_server():
     def init_server():
-        srv = HTTPServer.HTTPServer(("127.0.0.1", 7331), RequestHandler)
+        srv = BaseHTTPServer.HTTPServer(("127.0.0.1", 7331), RequestHandler)
         event.set()
         srv.handle_request()
         srv.server_close()
 
-    class RequestHandler(HTTPServer.BaseHTTPRequestHandler):
+    class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
             self.send_header("Content-type", "text/json")

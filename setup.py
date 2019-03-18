@@ -14,7 +14,7 @@ REQUIRES_PYTHON = '>=2.7.0,!=3.0*,!=3.1*,!=3.2*,!=3.3*'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
-REQUIRED = ["requests", "PyYAML"]
+REQUIRED = ["requests", "PyYAML", "six"]
 
 DEV = ["twine", "wheel", "pytest", "coverage"]
 
