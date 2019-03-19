@@ -24,9 +24,18 @@ commands:
       - run:
           name: Pytest
           command: |
-            coverage run --source unmock -m pytest --junitxml=junit/test-results.xml
+            coverage run --source unmock -m pytest --junitxml=junit/test-results.xml --ignore-glob=*/plugin_test.py
             coverage html --fail-under=80
             coverage xml
+      - run:
+          name: Pytest Plugin
+          command: |
+            # Should succeed - expected to raise a warning and catch it with pytest
+            pytest tests/plugin_test.py
+            # Test should fail (so we inverse exit codes)
+            bash -c "USE_UNMOCK=True pytest -sx tests/plugin_test.py; if [[ \$? -eq 0 ]] ; then exit 1 ; else exit 0 ; fi"
+            # Test should succeed - unmock up and running
+            USE_UNMOCK=True pytest tests/plugin_test.py --unmock
       - when:
           condition: << parameters.publish >>
           steps:

@@ -12,11 +12,11 @@ from .utils import one_hit_server, get_token, MockResponse
 
 def test_default_logger(tmpdir):
     opts = UnmockOptions()
-    logger = opts.logger
+    logger = opts._logger
     assert logger.getEffectiveLevel() == logging.DEBUG
     assert logger.name == "unmock.reporter"
     opts = UnmockOptions(storage_path=tmpdir)
-    handlers = opts.logger.parent.handlers  # Handlers are set for unmock, not unmock.*
+    handlers = opts._logger.parent.handlers  # Handlers are set for unmock, not unmock.*
     assert handlers
     for handler in handlers:
         if isinstance(handler, logging.handlers.RotatingFileHandler):
@@ -40,7 +40,6 @@ def test_whitelist_local():
 
 def test_credentials_with_token(tmpdir):
     opts = UnmockOptions(storage_path=tmpdir)
-    assert opts.token is None
     assert opts.persistence.token is None
     with open(opts.persistence.config_path, 'w') as cnfgfd:
         cnfgfd.writelines(["[unmock]\ntoken={tok}\n".format(tok=get_token())])
@@ -69,14 +68,14 @@ def test_get_token_errors(tmpdir):
         requests_get_patch.side_effect = lambda _, headers: MockResponse({}, status_code=0)
         with pytest.raises(unmock_exceptions.UnmockAuthorizationException,
                            match="Internal authorization error"):  # get_token called on init
-            UnmockOptions(token=PSEUDO_TOKEN, storage_path=tmpdir)
+            UnmockOptions(refresh_token=PSEUDO_TOKEN, storage_path=tmpdir)
 
         requests_post_patch.side_effect = mocked_post(MockResponse({}))
         with pytest.raises(unmock_exceptions.UnmockAuthorizationException,
                            match="Incorrect server response: did not get accessToken"):
-            UnmockOptions(token=PSEUDO_TOKEN, storage_path=tmpdir)
+            UnmockOptions(refresh_token=PSEUDO_TOKEN, storage_path=tmpdir)
 
         requests_post_patch.side_effect = mocked_post(MockResponse({}, status_code=0))
         with pytest.raises(unmock_exceptions.UnmockAuthorizationException,
                            match="Internal authorization error, receieved"):
-            UnmockOptions(token=PSEUDO_TOKEN, storage_path=tmpdir)
+            UnmockOptions(refresh_token=PSEUDO_TOKEN, storage_path=tmpdir)

@@ -14,10 +14,8 @@ def tmpdir():
 @pytest.fixture
 def unmock_and_reset():
     def init(**kwargs):
-        default_kwargs = {"token": get_token(), "logger": get_logger()}
+        default_kwargs = {"refresh_token": get_token(), "logger": get_logger()}
         default_kwargs.update(kwargs)
-        opts = unmock.UnmockOptions(**default_kwargs)
-        unmock.init(opts)
-        return opts
+        return unmock.init(**default_kwargs)
     yield init
     unmock.reset()

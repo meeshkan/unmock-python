@@ -47,7 +47,7 @@ def initialize(unmock_options):
             # Otherwise, we create our own HTTPSConnection to redirect the call to our service when needed.
             # We add the "unmock" attribute to this object and store information for later use.
             uri = parse_url(url)
-            req = http_client.HTTPSConnection(unmock_options.unmock_host, unmock_options.unmock_port,
+            req = http_client.HTTPSConnection(unmock_options._unmock_host, unmock_options._unmock_port,
                                               timeout=conn.timeout)
             # unmock_data dictionary items explained:
             # - headers_qp -> contains header information that is used in *q*uery *p*arameters
