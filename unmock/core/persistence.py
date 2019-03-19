@@ -116,7 +116,7 @@ class FSPersistence(Persistence):
     def hash_dir(self):
         return os.path.join(self.unmock_dir, "save")
 
-    def __outdir(self, hash):
+    def _outdir(self, hash):
         hashdir = os.path.join(self.hash_dir, hash)
         makedirs(hashdir)
         return hashdir
@@ -124,6 +124,7 @@ class FSPersistence(Persistence):
     def __write_to_hashed(self, hash, filename, content):
         """
         Writes given content to the given filename, to be located in the relevant hash directory
+        Returns True upon successful write, False otherwise.
         :param hash: A story hash
         :type hash string
         :param filename: The filename to use when saving
@@ -132,9 +133,11 @@ class FSPersistence(Persistence):
         :type dictionary, string
         """
         if content is not None:
-            with open(os.path.join(self.__outdir(hash), filename), 'w') as fp:
+            with open(os.path.join(self._outdir(hash), filename), 'w') as fp:
                 json.dump(content, fp, indent=2)
                 fp.flush()
+            return True
+        return False
 
     def __load_from_hashed(self, hash, filename):
         """
@@ -146,10 +149,10 @@ class FSPersistence(Persistence):
         :return: The decoded content from filename if successful, None otherwise
         """
         try:
-            with open(os.path.join(self.__outdir(hash), filename)) as fp:
+            with open(os.path.join(self._outdir(hash), filename)) as fp:
                 return json.load(fp)
         except (json.JSONDecodeError, OSError, IOError):
-            # JSONDecode when it fails decoding content
+            # JSONDecoder when it fails decoding content
             # OSError is for when the file is not found on Python3
             # IOError for when file is not found on Python2
             # Raise on other errors
@@ -171,7 +174,7 @@ class FSPersistence(Persistence):
                 del self.partial_body_jsons[hash]  # Success! Remove the partial's cache
             except json.JSONDecodeError:
                 body = None  # Failed! Don't access disk just yet...
-        self.__write_to_hashed(hash=hash, filename=FSPersistence.BODY_FILE, content=body)
+        return self.__write_to_hashed(hash=hash, filename=FSPersistence.BODY_FILE, content=body)
 
     def save_auth(self, auth):
         with open(self.token_path, 'w') as tknfd:

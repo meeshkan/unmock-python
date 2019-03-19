@@ -7,7 +7,7 @@ def test_init_and_reset():
     unmock.reset()
     assert len(unmock_core.PATCHERS.targets) == len(unmock_core.PATCHERS.patchers) == 0
 
-    unmock.init(unmock.UnmockOptions(save=True))
+    unmock.init(save=True)
     assert len(unmock_core.PATCHERS.targets) == len(unmock_core.PATCHERS.patchers) == 5
     unmock.reset()
     assert len(unmock_core.PATCHERS.targets) == len(unmock_core.PATCHERS.patchers) == 0
