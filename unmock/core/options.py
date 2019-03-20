@@ -254,6 +254,8 @@ class UnmockOptions:
         :type string
         """
         if unmock_hash is not None and unmock_hash not in story:
-            if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
-                self.persistence.save_body(hash=unmock_hash, body=body)
-            return unmock_hash
+            if body is None or self.save == False or (isinstance(self.save, list) and unmock_hash not in self.save):
+                # No content or nothing to save, so saving the mocked data "done"
+                return unmock_hash
+            if self.persistence.save_body(hash=unmock_hash, body=body):
+                return unmock_hash  # Only return the hash once we have a successful write
