@@ -153,7 +153,7 @@ with ignoring `"story"`):
 unmock_options = unmock.init()
 unmock_options.ignore("headers", "story")
 # Option B:
-unmock.init(unmock.UnmockOptions(ignore=["headers", "story"]))
+unmock.init(ignore=["headers", "story"])
 ```
 
 The following fields may be ignored:
@@ -170,8 +170,8 @@ Ignore evaluates regular expressions, so you can also pass
 ignore nested headers, pass a dictionary such as
 `{"headers": "Authorization" }`, or to match against the value of a
 header, `{"headers": { Authorization: "Bearer *" }}`. When using the
-ignore _method_ on the `UnmockOptions` object, you may pass either a
-list (`*args`) or a dictionary (`**kwargs`).
+ignore _method_ on the `UnmockOptions` object (returned from a call to `init`),
+you may pass either a list (`*args`) or a dictionary (`**kwargs`).
 
 ### Adding a signature
 
@@ -185,7 +185,7 @@ To do this, use the `signature` field of the unmock options object:
 unmock_options = unmock.init()
 unmock_options.signature = "signature-for-this-particular-test"
 # Option B
-unmock.init(unmock.UnmockOptions(signature="signature-for-this-particular-test"))
+unmock.init(signature="signature-for-this-particular-test")
 ```
 
 ### Whitelisting API
@@ -197,7 +197,7 @@ If you do not want a particular API to be mocked, whitelist it.
 unmock_options = unmock.init()
 unmock_options.whitelist = ["api.hubspot.com", "api.typeform.com"]
 # Option B:
-unmock.init(unmock.UnmockOptions(whitelist=["api.hubspot.com", "api.typeform.com"]))
+unmock.init(whitelist=["api.hubspot.com", "api.typeform.com"])
 ```
 
 ### unmock.io tokens
