@@ -7,7 +7,7 @@ try:
 except ImportError:
     import mock
 
-from ...__version__ import __version__
+from ..__version__ import __version__
 
 __all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs", "unmock_user_agent"]
 
