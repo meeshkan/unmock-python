@@ -7,7 +7,17 @@ try:
 except ImportError:
     import mock
 
+from ...__version__ import __version__
+
 __all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs"]
+
+def unmock_user_agent():
+    svi = sys.version_info
+    return {
+        "lang": "python",
+        "lang_version": "{major}.{minor}.{patch}".format(major=svi.major, minor=svi.minor, patch=svi.micro),
+        "unmock_version": __version__
+    }
 
 def is_python_version_at_least(version):
     """
