@@ -9,11 +9,12 @@ except ImportError:
 
 from ...__version__ import __version__
 
-__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs"]
+__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs", "unmock_user_agent"]
 
 def unmock_user_agent():
+    """Returns an unmock user agent header and value"""
     svi = sys.version_info
-    return {
+    return "X-Unmock-Client-User-Agent", {
         "lang": "python",
         "lang_version": "{major}.{minor}.{patch}".format(major=svi.major, minor=svi.minor, patch=svi.micro),
         "unmock_version": __version__

@@ -3,6 +3,7 @@ from .utils import Patchers, parse_url, is_python_version_at_least
 from six.moves import http_client
 from . import PATCHERS, STORIES
 from .options import UnmockOptions
+from .utils import unmock_user_agent
 
 __all__ = ["initialize", "reset"]
 
@@ -63,6 +64,8 @@ def initialize(unmock_options):
             if token is not None:  # Add token to official headers
                 # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
                 req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
+            ua_key, ua_value = unmock_user_agent()
+            req.unmock_data["headers"][ua_key] = ua_value
             setattr(conn, "unmock", req)
 
 
