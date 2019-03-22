@@ -209,9 +209,7 @@ def initialize(unmock_options):
     original_putheader = PATCHERS.patch("six.moves.http_client.HTTPConnection.putheader", unmock_putheader)
     original_endheaders = PATCHERS.patch("six.moves.http_client.HTTPConnection.endheaders", unmock_end_headers)
     original_getresponse = PATCHERS.patch("six.moves.http_client.HTTPConnection.getresponse", unmock_get_response)
-    if unmock_options.save:
-        # Only patch this if we have save=True or save is a list of hashes/stories to save
-        original_response_read = PATCHERS.patch("six.moves.http_client.HTTPResponse.read", unmock_response_read)
+    original_response_read = PATCHERS.patch("six.moves.http_client.HTTPResponse.read", unmock_response_read)
 
     PATCHERS.start()
 

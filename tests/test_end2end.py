@@ -26,7 +26,7 @@ def test_context_manager():
     assert response.status_code == 200
     with pytest.raises(Exception):
         response.json()  # Expected to raise as no valid JSON response
-    with unmock.Scope():
+    with unmock.patch():
         response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
         assert response.status_code == 200
         assert response.json()  # Expected to pass as valid response from unmock service is JSON file

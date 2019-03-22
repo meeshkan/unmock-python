@@ -80,7 +80,7 @@ def is_mocking():
     return len(core.PATCHERS.targets) > 0
 
 
-class Scope:
+class patch:
     """
     Allows the usage of unmock with scope-specific context managers.
     """

@@ -89,16 +89,21 @@ pytest tests --unmock
 ```
 
 2. You can control use unmock in a scoped manner using context managers:
-```python
+```
 # do stuff
-with unmock.Scope():
+with unmock.patch():
     response = requests.get("https://www.example.com/")
 # do stuff with mocked response
-real_response = requests.get("https://www.example.com/")  # won't be mocked    
+real_response = requests.get("https://www.example.com/")  # won't be mocked
+
+# You can also access the returned object to modify certain runtime behaviour:
+with unmock.patch() as opts:
+    # can modify certain behaviour aspects via `opts` object now too
+    response = requests.get("https://www.example.com/")
 ``` 
 
 3. You can have fine grained control over unmock using the `init` and
-`reset` methods, and handling the `UnmockOptions` object during runtime:
+`reset` methods, and modify the `UnmockOptions` object during runtime:
 ```python
 import unmock
 
@@ -148,8 +153,8 @@ consult the documentation about that service
 
 ### Scoping
 As a handy shortcut to initializing and reseting the capturing of API
-calls, we also offer the use of context manager via `unmock.Scope()`.
-`Scope` accepts as parameters anything that `init` accepts.
+calls, we also offer the use of context manager via `unmock.patch()`.
+`patch` accepts as parameters anything that `init` accepts.
 
 ### Saving mocks
 
