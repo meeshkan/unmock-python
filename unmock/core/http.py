@@ -65,7 +65,7 @@ def initialize(unmock_options):
                 # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
                 req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
             ua_key, ua_value = unmock_user_agent()
-            req.unmock_data["headers"][ua_key] = ua_value
+            req.unmock_data["headers"][ua_key] = (ua_value, )
             setattr(conn, "unmock", req)
 
 
