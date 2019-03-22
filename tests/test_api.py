@@ -12,6 +12,6 @@ def test_init_and_reset():
 
 def test_context_manager():
     assert_number_of_patches(0)
-    with unmock.Scope():
+    with unmock.patch():
         assert_number_of_patches(5)
     assert_number_of_patches(0)
