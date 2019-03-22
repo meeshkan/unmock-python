@@ -9,16 +9,49 @@ except ImportError:
 
 from ..__version__ import __version__
 
-__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs", "unmock_user_agent"]
+__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs", "unmock_user_agent", "UnmockData"]
 
-def unmock_user_agent():
+class UnmockData:
+    STORIES = set()
+
+    def __init__(self, method, path, query=None):
+        self.headers_qp = dict()  # contains header information that is used in *q*uery *p*arameters
+        self.path = path  # stores the endpoint for the request
+        if query is not None:
+            self.path = "{path}?{query}".format(path=self.path, query=query)
+        self.headers = dict()  # actual headers to send to the unmock API
+        self.method = method  # actual method to use with the unmock API (matches the method for the original request)
+        self.body = None  # Content of data sent as body of request
+
+
+    @staticmethod
+    def stories(serializable=False):
+        if serializable:
+            return list(UnmockData.STORIES)  # Returned as list to be serializable
+        return UnmockData.STORIES
+
+    @staticmethod
+    def add_story(unmock_hash):
+        if unmock_hash is not None:
+            UnmockData.STORIES.add(unmock_hash)
+
+    @staticmethod
+    def add_stories(stories):
+        UnmockData.STORIES.update(set(stories))
+
+    @staticmethod
+    def clear_stories():
+        UnmockData.STORIES.clear()
+
+def unmock_user_agent(stringified=True):
     """Returns an unmock user agent header and value"""
     svi = sys.version_info
-    return "X-Unmock-Client-User-Agent", json.dumps({
+    ua_obj = {
         "lang": "python",
         "lang_version": "{major}.{minor}.{patch}".format(major=svi.major, minor=svi.minor, patch=svi.micro),
         "unmock_version": __version__
-    })
+    }
+    return "X-Unmock-Client-User-Agent", json.dumps(ua_obj) if stringified else ua_obj
 
 def is_python_version_at_least(version):
     """

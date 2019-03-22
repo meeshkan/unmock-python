@@ -10,7 +10,7 @@ except ImportError:
     class HTTPStatus:
         OK = 200
 
-from .utils import parse_url
+from .utils import parse_url, unmock_user_agent, UnmockData
 from .logger import setup_logging
 from .persistence import FSPersistence, Persistence
 from .exceptions import UnmockAuthorizationException, UnmockServerUnavailableException
@@ -179,14 +179,11 @@ class UnmockOptions:
     def _xy(xy):
         return "/x/" if xy else "/y/"
 
-    def _build_query(self, story,  headers, host=None, method=None, path=None):
+    def _build_query(self, unmock_data, host=None):
         """
         Builds the query path for unmock requests.
-        :param story: A list stories hashes used with unmock (for statefulness).
-        :type story list
-
-        :param headers: A dictionary (with strings as keys) describing the original request headers
-        :type headers dictionary
+        :param unmock_data An unmocked connections UnmockData object with information
+        :type unmock_data UnmockData
 
         :param host: An optional string stating the original request host
         :type host string
@@ -199,11 +196,11 @@ class UnmockOptions:
         :return: The query path (string)
         """
         qs = {
-            "story": json.dumps(story),
-            "path": path or "",
+            "story": json.dumps(unmock_data.stories(serializable=True)),
+            "path": unmock_data.path or "",
             "hostname": host or "",
-            "method": method or "",
-            "headers": json.dumps(headers)
+            "method": unmock_data.method or "",
+            "headers": json.dumps(unmock_data.headers)
         }
         if self._ignore is not None:
             qs["ignore"] = json.dumps(self._ignore)
@@ -211,36 +208,43 @@ class UnmockOptions:
             qs["signature"] = self.signature
         return urlencode(qs)
 
-    def _end_reporter(self, res, data, host, method, path, story, xy):
+    # The following types of res, req, might need to be changed to fit more classes/types
+    # As we extend different libraries being captured
+    def _end_reporter(self, res, host, xy, unmock_data):
         """
         Reports the capture of an API call, possibly storing the headers in the relevant directory for unmock (if
         persistence layer is activated via `save` parameter).
         :param res: The actual response object from Unmock service
         :type res http_client.HTTPResponse
-        :param data: The data sent to the unmock server (the body sent)
-        :type data string
         :param host: The original host the request was directed to
         :type host string
-        :param method: The original method for the request
-        :type method string
-        :param path: The original path requested from the original host (including query parameters)
-        :type path string
-        :param story: The list of current stories used and stored in Unmock
-        :type story list
         :param xy: string representing whether or not this request is public ('/y/') or private ('/x/')
         :type xy string
+        :param unmock_data: A dictionary containing unmock data about the request being made
+        :type unmock_data UnmockData
         :return: A new story if we have not encountered this story before.
         """
         unmock_hash = res.getheader("unmock-hash", default=None)
-        if unmock_hash is not None and unmock_hash not in story:
+        if unmock_hash is not None and unmock_hash not in unmock_data.stories():
             self._logger.info("*****url-called*****")
-            data_string = " with data {data}".format(data=data) if data is not None else "."
-            self._logger.info("Hi! We see you've called %s %s%s%s", method, host, path, data_string)
+            data_string = " with data {data}".format(data=unmock_data.body) if unmock_data.body is not None else "."
+            self._logger.info("Hi! We see you've called %s %s%s%s", unmock_data.method, host, unmock_data.path,
+                              data_string)
             self._logger.info("We've sent you mock data back. You can edit your mock at https://unmock.io%s%s.", xy,
                               unmock_hash)
             if (self.save == True) or (isinstance(self.save, list) and unmock_hash in self.save):
                 self._logger.info("Mocked data was also saved locally at %s", self.persistence._outdir(unmock_hash))
                 self.persistence.save_headers(hash=unmock_hash, headers=dict(res.getheaders()))
+                self.persistence.save_metadata(unmock_hash, unmock_data.body)
+                # Extract metadata from original request
+                self.persistence.save_metadata(unmock_hash, {
+                    "requestHeaders": unmock_data.headers_qp,
+                    "requestHost": host,
+                    "requestMethod": unmock_data.method,
+                    "requestPath": unmock_data.path
+                })
+                ua_key, ua_value = unmock_user_agent(stringified=False)
+                self.persistence.save_metadata(unmock_hash, ua_value)
             return unmock_hash
 
     def _save_body(self, unmock_hash, story, body=None):
