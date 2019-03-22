@@ -78,3 +78,17 @@ def is_mocking():
     """
     from . import core
     return len(core.PATCHERS.targets) > 0
+
+
+class patch:
+    """
+    Allows the usage of unmock with scope-specific context managers.
+    """
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __enter__(self):
+        return initialize(**self.kwargs)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        reset()

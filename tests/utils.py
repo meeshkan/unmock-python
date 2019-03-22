@@ -18,14 +18,6 @@ def get_logger():
     return LOGGER
 
 
-def is_text(text):
-    """Checks whether text is string/unicode (Python 2/3 compatibility)"""
-    try:
-        return isinstance(text, (unicode, str))
-    except NameError:
-        return isinstance(text, str)
-
-
 def one_hit_server():
     def init_server():
         srv = BaseHTTPServer.HTTPServer(("127.0.0.1", 7331), RequestHandler)
