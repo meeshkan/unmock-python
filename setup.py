@@ -60,57 +60,19 @@ class SetupCommand(Command):
     @staticmethod
     def status(s):
         """Prints things in bold."""
-        print('\033[1m{0}\033[0m'.format(s))
+        print('\n\033[1m{0}\033[0m'.format(s))
 
 
-class BuildDistCommand(SetupCommand):
-    """Support setup.py upload."""
-    description = "Build the package."
-
-    def run(self):
-        try:
-            self.status("Removing previous builds...")
-            rmtree(os.path.join(here, 'dist'))
-        except OSError:
-            pass
-
-        self.status("Building Source and Wheel (universal) distribution...")
-        os.system("{executable} setup.py sdist bdist_wheel --universal".format(executable=sys.executable))
-        sys.exit()
-
-
-class UploadCommand(SetupCommand):
-    """Support setup.py upload."""
-    description = "Build and publish the package."
+class PushGitTagCommand(SetupCommand):
+    """Supports setup.py tags"""
+    description = "Pushes a git tag"
 
     def run(self):
-        try:
-            self.status("Removing previous builds...")
-            rmtree(os.path.join(here, 'dist'))
-        except OSError:
-            pass
-
-        self.status("Building Source and Wheel (universal) distribution...")
-        os.system("{executable} setup.py sdist bdist_wheel --universal".format(executable=sys.executable))
-
-        self.status("Uploading the package to PyPI via Twine...")
-        os.system("twine upload dist/*")
-
         self.status("Pushing git tags...")
         os.system("git tag v{about}".format(about=about['__version__']))
         os.system("git push --tags")
 
         sys.exit()
-
-
-class TestCommand(SetupCommand):
-    """Support setup.py test."""
-    description = "Run local test if they exist"
-
-    def run(self):
-        os.system("pytest")
-        sys.exit()
-
 
 setup(
     name=NAME,
@@ -143,5 +105,5 @@ setup(
         'Topic :: Software Development :: Testing :: Mocking'
     ],
     entry_points = {'pytest11': ['unmock = unmock.pytest.plugin']},
-    cmdclass={'dist': BuildDistCommand, 'upload': UploadCommand, 'test': TestCommand}
+    cmdclass={'tags': PushGitTagCommand}
 )
