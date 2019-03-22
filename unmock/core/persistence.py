@@ -21,6 +21,16 @@ class Persistence:
         self.token = token  # Token is only ever saved in memory, everything else is up to the implementation
 
     @abstractmethod
+    def save_metadata(self, hash, data):
+        """
+        Saves metadata about the original request, client and response.
+        :param hash: A story hash
+        :type hash string
+        :param data: A dictionary of strings as keys and anything serializable as values.
+        """
+        pass
+
+    @abstractmethod
     def save_headers(self, hash, headers=None):
         """
         Saves given headers in the persistence layer.
@@ -90,8 +100,10 @@ class Persistence:
 
 class FSPersistence(Persistence):
     """File system based persistence layer"""
-    HEADERS_FILE = "response-header.json"
-    BODY_FILE = "response.json"
+
+    HEADERS_KEY = "headers"
+    DATA_KEY = "body"
+    RESPONSE_FILE = "response.json"
     HOMEPATH = os.path.expanduser("~")
     CREDENTIALS_FILE = "credentials"
 
@@ -123,36 +135,38 @@ class FSPersistence(Persistence):
         makedirs(hashdir)
         return hashdir
 
-    def __write_to_hashed(self, hash, filename, content):
+    def __write_to_hashed(self, hash, key, content):
         """
         Writes given content to the given filename, to be located in the relevant hash directory
         Returns True upon successful write, False otherwise.
         :param hash: A story hash
         :type hash string
-        :param filename: The filename to use when saving
-        :type filename string
+        :param key: The key to use when saving locally
+        :type key string
         :param content: An optional serializable content (string or dictionary with string as keys)
         :type dictionary, string
         """
         if content is not None:
-            with open(os.path.join(self._outdir(hash), filename), 'w') as fp:
-                json.dump(content, fp, indent=2)
+            old_contents = self.__load_from_hashed(hash, key) or dict()
+            old_contents[key] = content
+            with open(os.path.join(self._outdir(hash), FSPersistence.RESPONSE_FILE), 'w') as fp:
+                json.dump(old_contents, fp, indent=2)
                 fp.flush()
             return True
         return False
 
-    def __load_from_hashed(self, hash, filename):
+    def __load_from_hashed(self, hash, key):
         """
         Attempts to load content from the filename located as the hash directory
         :param hash: A story hash
         :type hash string
-        :param filename: The filename to read from
-        :type filename string
+        :param key: The key to read from
+        :type key string
         :return: The decoded content from filename if successful, None otherwise
         """
         try:
-            with open(os.path.join(self._outdir(hash), filename)) as fp:
-                return json.load(fp)
+            with open(os.path.join(self._outdir(hash), FSPersistence.RESPONSE_FILE)) as fp:
+                return json.load(fp).get(key)
         except (json.JSONDecodeError, OSError, IOError):
             # JSONDecoder when it fails decoding content
             # OSError is for when the file is not found on Python3
@@ -161,7 +175,10 @@ class FSPersistence(Persistence):
             return None
 
     def save_headers(self, hash, headers=None):
-        self.__write_to_hashed(hash=hash, filename=FSPersistence.HEADERS_FILE, content=headers)
+        self.__write_to_hashed(hash=hash, key=FSPersistence.HEADERS_KEY, content=headers)
+
+    def save_metadata(self, hash, data):
+        pass
 
     def save_body(self, hash, body=None):
         if isinstance(body, str):
@@ -176,7 +193,7 @@ class FSPersistence(Persistence):
                 del self.partial_body_jsons[hash]  # Success! Remove the partial's cache
             except json.JSONDecodeError:
                 body = None  # Failed! Don't access disk just yet...
-        return self.__write_to_hashed(hash=hash, filename=FSPersistence.BODY_FILE, content=body)
+        return self.__write_to_hashed(hash=hash, key=FSPersistence.DATA_KEY, content=body)
 
     def save_auth(self, auth):
         with open(self.token_path, 'w') as tknfd:
@@ -184,10 +201,10 @@ class FSPersistence(Persistence):
             tknfd.flush()
 
     def load_headers(self, hash):
-        return self.__load_from_hashed(hash, FSPersistence.HEADERS_FILE)
+        return self.__load_from_hashed(hash, FSPersistence.HEADERS_KEY)
 
     def load_body(self, hash):
-        return self.__load_from_hashed(hash, FSPersistence.BODY_FILE)
+        return self.__load_from_hashed(hash, FSPersistence.DATA_KEY)
 
     def load_auth(self):
         if os.path.exists(self.token_path):
