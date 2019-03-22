@@ -1,11 +1,13 @@
+import pytest
 import requests
+from six import text_type
 
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-from .utils import get_logger, is_text
+from .utils import get_logger
 
 # Tests that actually send through to the unmock service and make sure it's all formed correctly
 TIMEOUT = 10
@@ -16,6 +18,18 @@ def test_no_credentials_no_signature(unmock_and_reset):
     unmock_and_reset(refresh_token=None)
     response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
     assert response.json()
+
+
+def test_context_manager():
+    import unmock
+    response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
+    assert response.status_code == 200
+    with pytest.raises(Exception):
+        response.json()  # Expected to raise as no valid JSON response
+    with unmock.patch():
+        response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
+        assert response.status_code == 200
+        assert response.json()  # Expected to pass as valid response from unmock service is JSON file
 
 
 def test_no_credentials_with_signature(unmock_and_reset):
@@ -40,7 +54,7 @@ def test_behance(unmock_and_reset):
     response = requests.get("{url}/{id}/comments{api}".format(url=URL, id=projects[0]["id"], api=API), timeout=TIMEOUT)
     comments = response.json().get("comments")
     assert comments, "Expecting a non-empty list of 'comments' in response"
-    assert is_text(comments[0]["comment"]), "Comments should be text"
+    assert isinstance(comments[0]["comment"], text_type), "Comments should be text"
 
 
 def test_hubapi(unmock_and_reset):
