@@ -92,10 +92,12 @@ class FSPersistence(Persistence):
     """File system based persistence layer"""
     HEADERS_FILE = "response-header.json"
     BODY_FILE = "response.json"
+    HOMEPATH = os.path.expanduser("~")
+    CREDENTIALS_FILE = "credentials"
 
     def __init__(self, token, path=None):
         super(FSPersistence, self).__init__(token)
-        self.homepath = os.path.abspath(path or os.path.expanduser("~"))  # Given directory or home path
+        self.homepath = os.path.abspath(path or FSPersistence.HOMEPATH)  # Given directory or home path
         makedirs(self.unmock_dir)  # Create home directory if needed
         # Maps unmock hashes (string) to partial json body (string), when body is read in chunks
         self.partial_body_jsons = dict()
@@ -110,7 +112,7 @@ class FSPersistence(Persistence):
 
     @property
     def config_path(self):
-        return os.path.join(self.unmock_dir, "credentials")
+        return os.path.join(self.unmock_dir, FSPersistence.CREDENTIALS_FILE)
 
     @property
     def hash_dir(self):
@@ -196,7 +198,10 @@ class FSPersistence(Persistence):
     def load_token(self):
         if self.token is not None:
             return self.token
-        if os.path.exists(self.config_path):
-            iniparser = configparser.ConfigParser(defaults={"token": None}, allow_no_value=True)
-            iniparser.read(self.config_path)
-            return iniparser.get("unmock", "token")
+        # We check in both the given config_path (default is under cwd) and under user home path.
+        # At worse, we check twice if the credentials file exists under the user's homepath.
+        for config_file in [self.config_path, os.path.join(FSPersistence.HOMEPATH, FSPersistence.CREDENTIALS_FILE)]:
+            if os.path.exists(config_file):
+                iniparser = configparser.ConfigParser(defaults={"token": None}, allow_no_value=True)
+                iniparser.read(config_file)
+                return iniparser.get("unmock", "token")
