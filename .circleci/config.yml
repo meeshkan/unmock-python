@@ -107,6 +107,7 @@ jobs:
       - image: circleci/python:3.6.8
     steps:
     - setup
+    - add_ssh_keys
     - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
     - run: python setup.py upload
 
