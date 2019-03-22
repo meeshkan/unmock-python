@@ -54,7 +54,7 @@ def initialize(**kwargs):
     from . import core  # Imported internally to keep the namespace clear
     new_stories = kwargs.get("story")
     if new_stories is not None:
-        core.STORIES += new_stories if isinstance(new_stories, list) else [new_stories]
+        core.UnmockData.add_stories(new_stories if isinstance(new_stories, list) else [new_stories])
     # By default, create the .unmock folder under cwd
     kwargs["storage_path"] = kwargs.get("storage_path", os.getcwd())
     unmock_options = UnmockOptions(**kwargs)

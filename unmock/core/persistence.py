@@ -180,6 +180,8 @@ class FSPersistence(Persistence):
         self.__write_to_hashed(hash=hash, key=FSPersistence.HEADERS_KEY, content=headers)
 
     def save_metadata(self, hash, data):
+        if data is None:  # nothing or nowhere to write
+            return
         target = self._outdir(hash, FSPersistence.METADATA_FILE)
         content = dict()
         if os.path.exists(target):

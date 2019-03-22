@@ -1,9 +1,9 @@
 import os
 from .utils import Patchers, parse_url, is_python_version_at_least
 from six.moves import http_client
-from . import PATCHERS, STORIES
+from . import PATCHERS
 from .options import UnmockOptions
-from .utils import unmock_user_agent
+from .utils import unmock_user_agent, UnmockData
 
 __all__ = ["initialize", "reset"]
 
@@ -50,22 +50,12 @@ def initialize(unmock_options):
             uri = parse_url(url)
             req = http_client.HTTPSConnection(unmock_options._unmock_host, unmock_options._unmock_port,
                                               timeout=conn.timeout)
-            # unmock_data dictionary items explained:
-            # - headers_qp -> contains header information that is used in *q*uery *p*arameters
-            # - path -> stores the endpoint for the request
-            # - story -> stores previous access to the unmock service
-            # - headers -> actual headers to send to the unmock API
-            # - method -> actual method to use with the unmock API (always matches the method for the original request)
-            setattr(req, "unmock_data", { "headers_qp": dict(),
-                                          "path": "{path}?{query}".format(path=uri.path, query=uri.query),
-                                          "story": STORIES,
-                                          "headers": dict(),
-                                          "method": method })
+            setattr(req, "unmock_data", UnmockData(path=uri.path, query=uri.query, method=method))
             if token is not None:  # Add token to official headers
                 # Added as a 1-tuple as the actual call to `putheader` (later on) unpacks it
-                req.unmock_data["headers"]["Authorization"] = ("Bearer {token}".format(token=token), )
+                req.unmock_data.headers["Authorization"] = ("Bearer {token}".format(token=token), )
             ua_key, ua_value = unmock_user_agent()
-            req.unmock_data["headers"][ua_key] = (ua_value, )
+            req.unmock_data.headers[ua_key] = (ua_value, )
             setattr(conn, "unmock", req)
 
 
@@ -86,15 +76,15 @@ def initialize(unmock_options):
             original_putheader(conn, header, *values)
 
         elif header == "Authorization":  # Authorization is part of the query parameters
-            conn.unmock.unmock_data["headers_qp"][header] = values
+            conn.unmock.unmock_data.headers_qp[header] = values
 
         elif header == UNMOCK_AUTH:  # UNMOCK_AUTH is part of the actual headers
             # TODO: is this ever called...? Where from..?
-            conn.unmock.unmock_data["headers"]["Authorization"] = values
+            conn.unmock.unmock_data.headers["Authorization"] = values
 
         else:  # Otherwise, we both use it for query parameters and for the actual headers
-            conn.unmock.unmock_data["headers_qp"][header] = values
-            conn.unmock.unmock_data["headers"][header] = values
+            conn.unmock.unmock_data.headers_qp[header] = values
+            conn.unmock.unmock_data.headers[header] = values
 
 
     def unmock_internal_end_headers(conn, message_body):
@@ -108,23 +98,20 @@ def initialize(unmock_options):
         """
         # Otherwise we make the actual call to the unmock service
         unmock_data = conn.unmock.unmock_data
-        method = unmock_data["method"]
 
         # Builds the query parameters line
-        query = unmock_options._build_query(story=unmock_data["story"], host=conn.host, method=method,
-                                            headers=unmock_data["headers_qp"],
-                                            path="{path}".format(path=unmock_data["path"]))
+        query = unmock_options._build_query(unmock_data=unmock_data, host=conn.host)
+        url = "{fake_path}?{query}".format(fake_path=unmock_options._xy(token), query=query)
 
         # Make the request to the service
-        original_putrequest(conn.unmock, method=method,
-                            url="{fake_path}?{query}".format(fake_path=unmock_options._xy(token), query=query))
+        original_putrequest(conn.unmock, method=unmock_data.method, url=url)
 
         # Add all the actual headers to the request
-        for header, value in unmock_data["headers"].items():
+        for header, value in unmock_data.headers.items():
             original_putheader(conn.unmock, header, *value)
 
         # Save body and call original endheaders with the body message
-        conn.unmock.unmock_data["body"] = message_body
+        conn.unmock.unmock_data.body = message_body
 
     if is_python_version_at_least("3.6"):  # The encode_chunked parameters was added in Python 3.6
         def unmock_end_headers(conn, message_body=None, encode_chunked=False):
@@ -179,10 +166,10 @@ def initialize(unmock_options):
             # Get unmocked response
             res = original_getresponse(conn.unmock)  # type: HTTPResponse
             # Report the unmocked response, URL
-            new_story = unmock_options._end_reporter(res=res, data=unmock_data["body"], host=conn.host,
-                                                     method=unmock_data["method"], path=unmock_data["path"],
-                                                     story=STORIES, xy=unmock_options._xy(token))
+            new_story = unmock_options._end_reporter(res=res, host=conn.host, xy=unmock_options._xy(token),
+                                                     unmock_data=unmock_data)
             setattr(res, "unmock_hash", new_story)  # So we know the story the response belongs to
+            setattr(res, "unmock_data", unmock_data)
             return res
 
     def unmock_response_read(res, amt=None):
@@ -197,11 +184,13 @@ def initialize(unmock_options):
         """
         s = original_response_read(res, amt)
         if hasattr(res, "unmock_hash"):  # We can now save the body of the content if it exists
+            unmock_data = res.unmock_data
             # Report and store the stories...
             # str() to transform from Python2's unicode
-            new_story = unmock_options._save_body(unmock_hash=res.unmock_hash, story=STORIES, body=str(s.decode()))
+            new_story = unmock_options._save_body(unmock_hash=res.unmock_hash, story=unmock_data.stories(),
+                                                  body=str(s.decode()))
             if new_story is not None:
-                STORIES.append(new_story)
+                unmock_data.add_story(new_story)
         return s
 
     # Create the patchers and mock away!
@@ -217,4 +206,4 @@ def initialize(unmock_options):
 
 def reset():
     PATCHERS.clear()
-    del STORIES[:]
+    UnmockData.clear_stories()
