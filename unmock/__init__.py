@@ -82,8 +82,11 @@ def is_mocking():
 
 class Scope:
     """Uses unmock locally as context manager"""
-    def __enter__(self, **kwargs):
-        return initialize(**kwargs)
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __enter__(self):
+        return initialize(**self.kwargs)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         reset()
