@@ -33,6 +33,7 @@ We're open to more requests - just [let us know](mailto:contact@unmock.io)!
     - [Tests](#tests)
     - [Development](#development)
     - [unmock.io](#unmockio)
+    - [Scoping](#scoping)
     - [Saving mocks](#saving-mocks)
     - [Ignoring aspects of a mock](#ignoring-aspects-of-a-mock)
     - [Adding a signature](#adding-a-signature)
@@ -67,26 +68,49 @@ $ pip install unmock
 
 ### Tests
 
-In your unit tests, you can invoke unmock like this:
+In your unit tests, you can invoke unmock in several ways:
+
+1. If you're using pytest for your tests, you can either use the unmock
+fixture (you don't even need to import unmock!) -
 
 ```python
 import pytest
 import requests
-import unmock
 
-@pytest.fixture
-def unmocker():
-    unmock.init()  # Called before the test starts
-    yield
-    unmock.reset()  # Called after the test ends
-
-def test_behance(unmocker):
+def test_behance(unmock_local):
     response = requests.get("https://www.behance.net/v2/projects/5456?api_key=u_n_m_o_c_k_200")
     assert response.json().get("project").get("id") == 5456
 ```
 
-The above syntax uses pytest, but the same is easily accomplishable in
-other test suites, even your own custom made one!
+... or you may want to use unmock for all your tests, in which case you
+can simply use the `--unmock` flag for pytest:
+```bash
+pytest tests --unmock
+```
+
+2. You can control use unmock in a scoped manner using context managers:
+```python
+# do stuff
+with unmock.Scope():
+    response = requests.get("https://www.example.com/")
+# do stuff with mocked response
+real_response = requests.get("https://www.example.com/")  # won't be mocked    
+``` 
+
+3. You can have fine grained control over unmock using the `init` and
+`reset` methods, and handling the `UnmockOptions` object during runtime:
+```python
+import unmock
+
+# do stuff
+opts = unmock.init()
+res1 = requests.get("https://www.example.com")  # will be mocked
+opts.save = True
+res2 = requests.get("https://www.example.com")  # will be mocked and response will be saved
+unmock.reset()
+res3 = requests.get("https://www.example.com")  # will not be mocked
+```
+
 
 Unmock will then either serve JIT semantically functionally correct
 mocks from its database or an empty JSON object for unmocked APIs that
@@ -101,6 +125,9 @@ After you create your flask, django, or own server, call
 ```python
 unmock_options = unmock.init()
 unmock_options.ignore("story")
+
+# equivalent to calling:
+unmock.init(ignore="story")
 ```
 
 This has the same effect as activating unmock in your tests.
@@ -118,6 +145,11 @@ help unmock better organize your mocks in its web dashboard.
 The URLs printed to the command line are hosted by unmock.io. You can
 consult the documentation about that service
 [here](https://www.unmock.io/docs).
+
+### Scoping
+As a handy shortcut to initializing and reseting the capturing of API
+calls, we also offer the use of context manager via `unmock.Scope()`.
+`Scope` accepts as parameters anything that `init` accepts.
 
 ### Saving mocks
 
@@ -181,10 +213,9 @@ different mocks for the same endpoint in otherwise similar conditions.
 To do this, use the `signature` field of the unmock options object:
 
 ```python
-# Option A:
 unmock_options = unmock.init()
 unmock_options.signature = "signature-for-this-particular-test"
-# Option B
+# Equivalent to
 unmock.init(signature="signature-for-this-particular-test")
 ```
 
@@ -193,10 +224,9 @@ unmock.init(signature="signature-for-this-particular-test")
 If you do not want a particular API to be mocked, whitelist it.
 
 ```python
-# Option A:
 unmock_options = unmock.init()
 unmock_options.whitelist = ["api.hubspot.com", "api.typeform.com"]
-# Option B:
+# Equivalent to:
 unmock.init(whitelist=["api.hubspot.com", "api.typeform.com"])
 ```
 
