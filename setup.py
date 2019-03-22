@@ -60,11 +60,11 @@ class SetupCommand(Command):
     @staticmethod
     def status(s):
         """Prints things in bold."""
-        print('\033[1m{0}\033[0m'.format(s))
+        print('\n\033[1m{0}\033[0m'.format(s))
 
 
 class BuildDistCommand(SetupCommand):
-    """Support setup.py upload."""
+    """Support setup.py build."""
     description = "Build the package."
 
     def run(self):
@@ -99,6 +99,27 @@ class UploadCommand(SetupCommand):
         self.status("Pushing git tags...")
         os.system("git tag v{about}".format(about=about['__version__']))
         os.system("git push --tags")
+
+        sys.exit()
+
+class TestUploadCommand(SetupCommand):
+    """Supports setup.py testupload"""
+    description = "Publishes the package to TestPyPi without pushing tags to git"
+
+    def run(self):
+        try:
+            self.status("Removing previous builds...")
+            rmtree(os.path.join(here, 'dist'))
+        except OSError:
+            pass
+
+        self.status("Building Source and Wheel (universal) distribution...")
+        os.system("{executable} setup.py sdist bdist_wheel --universal".format(executable=sys.executable))
+
+        self.status("[Test] Uploading the package to TestPyPI via Twine...")
+        self.status("[Environment Variables] Username: {0}".format(os.environ.get("TWINE_USERNAME")))
+        self.status("[Environment Variables] Password: {0}".format(os.environ.get("TWINE_PASSWORD")))
+        os.system("twine upload --repository-url https://test.pypi.org/legacy/ dist/*")
 
         sys.exit()
 
@@ -143,5 +164,5 @@ setup(
         'Topic :: Software Development :: Testing :: Mocking'
     ],
     entry_points = {'pytest11': ['unmock = unmock.pytest.plugin']},
-    cmdclass={'dist': BuildDistCommand, 'upload': UploadCommand, 'test': TestCommand}
+    cmdclass={'dist': BuildDistCommand, 'upload': UploadCommand, 'test': TestCommand, 'testupload': TestUploadCommand}
 )

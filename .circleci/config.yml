@@ -102,12 +102,25 @@ jobs:
     - setup
     - test
 
+  test-deploy:
+    docker:
+      - image: circleci/python:3.6.8
+    steps:
+    - setup
+    - add_ssh_keys:
+        fingerprints:
+          - "2f:9a:8b:13:75:82:e8:62:be:be:e4:d3:10:fa:09:fe"
+    - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
+    - run: sudo python setup.py testupload
+
   deploy:
     docker:
       - image: circleci/python:3.6.8
     steps:
     - setup
-    - add_ssh_keys
+    - add_ssh_keys:
+        fingerprints:
+          - "2f:9a:8b:13:75:82:e8:62:be:be:e4:d3:10:fa:09:fe"
     - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
     - run: sudo python setup.py upload
 
@@ -122,6 +135,18 @@ workflows:
       - linux35
       - linux36
       - linux37
+      - test-deploy:
+          requires:
+            #- macOS36
+            #- macOS37
+            - linux27
+            - linux34
+            - linux35
+            - linux36
+            - linux37
+          filters:
+            branches:
+              ignore: master
       - deploy:
           requires:
             #- macOS36
