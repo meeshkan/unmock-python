@@ -198,10 +198,7 @@ class FSPersistence(Persistence):
     def load_token(self):
         if self.token is not None:
             return self.token
-        locations = [self.config_path]  # Create list of possible locations for credentials file, first is given path
-        if FSPersistence.HOMEPATH != self.homepath:  # If the user home path is not the given one, then look there too.
-            locations.append(os.path.join(FSPersistence.HOMEPATH, FSPersistence.CREDENTIALS_FILE))
-        for config_file in locations:
+        for config_file in [self.config_path, os.path.join(FSPersistence.HOMEPATH, FSPersistence.CREDENTIALS_FILE)]:
             if os.path.exists(config_file):
                 iniparser = configparser.ConfigParser(defaults={"token": None}, allow_no_value=True)
                 iniparser.read(config_file)
