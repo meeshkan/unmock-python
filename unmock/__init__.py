@@ -81,7 +81,9 @@ def is_mocking():
 
 
 class Scope:
-    """Uses unmock locally as context manager"""
+    """
+    Allows the usage of unmock with scope-specific context managers.
+    """
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 

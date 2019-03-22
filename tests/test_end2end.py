@@ -1,3 +1,4 @@
+import pytest
 import requests
 from six import text_type
 
@@ -17,6 +18,18 @@ def test_no_credentials_no_signature(unmock_and_reset):
     unmock_and_reset(refresh_token=None)
     response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
     assert response.json()
+
+
+def test_context_manager():
+    import unmock
+    response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
+    assert response.status_code == 200
+    with pytest.raises(Exception):
+        response.json()  # Expected to raise as no valid JSON response
+    with unmock.Scope():
+        response = requests.get("http://www.example.com/", timeout=TIMEOUT)  # Nothing here anyway
+        assert response.status_code == 200
+        assert response.json()  # Expected to pass as valid response from unmock service is JSON file
 
 
 def test_no_credentials_with_signature(unmock_and_reset):
