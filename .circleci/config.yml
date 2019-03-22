@@ -14,6 +14,7 @@ commands:
       - run:
           name: Installing package
           command: sudo pip install --upgrade -e .[dev]
+
   test:
     description: "Run tests, possibly publishing results"
     parameters:
@@ -44,6 +45,29 @@ commands:
             - store_artifacts:
                 path: htmlcov
             - codecov/upload
+  build-task:
+    description: "Builds the python wheel"
+    steps:
+      - run:
+          name: "Builds wheel"
+          command: sudo python setup.py sdist bdist_wheel --universal
+
+  deploy-task:
+    description: "Uploads the wheel to PyPi and pushes git tags"
+    steps:
+      - run:
+          name: "Uploads to PyPi"
+          command: twine upload dist/*
+      - run:
+          name: "Pushes git tag"
+          command: python setup.py tags
+
+  test-deploy-task:
+    description: "Dry-run; uploads the Python wheel to TestPyPi"
+    steps:
+      - run:
+          name: "Upload to TestPyPi"
+          command: twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 jobs:
   # Find tags here: https://circleci.com/docs/2.0/docker-image-tags.json
@@ -111,7 +135,8 @@ jobs:
         fingerprints:
           - "2f:9a:8b:13:75:82:e8:62:be:be:e4:d3:10:fa:09:fe"
     - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
-    - run: sudo python setup.py testupload
+    - build-task
+    - test-deploy-task
 
   deploy:
     docker:
@@ -122,7 +147,8 @@ jobs:
         fingerprints:
           - "2f:9a:8b:13:75:82:e8:62:be:be:e4:d3:10:fa:09:fe"
     - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
-    - run: sudo python setup.py upload
+    - build-task
+    - deploy-task
 
 workflows:
   version: 2
