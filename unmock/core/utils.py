@@ -7,7 +7,18 @@ try:
 except ImportError:
     import mock
 
-__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs"]
+from ..__version__ import __version__
+
+__all__ = ["Patchers", "parse_url", "is_python_version_at_least", "makedirs", "unmock_user_agent"]
+
+def unmock_user_agent():
+    """Returns an unmock user agent header and value"""
+    svi = sys.version_info
+    return "X-Unmock-Client-User-Agent", json.dumps({
+        "lang": "python",
+        "lang_version": "{major}.{minor}.{patch}".format(major=svi.major, minor=svi.minor, patch=svi.micro),
+        "unmock_version": __version__
+    })
 
 def is_python_version_at_least(version):
     """
