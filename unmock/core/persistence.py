@@ -1,8 +1,9 @@
 from abc import ABCMeta, abstractmethod
 import json
 import os
-from .utils import makedirs, is_python_version_at_least
 from six.moves import configparser
+import yaml
+from .utils import makedirs, is_python_version_at_least
 if not is_python_version_at_least("3.5"):
     json.JSONDecodeError = ValueError  # JSONDecodeError was introduced in Python3.5, before it would throw ValueError
 
@@ -106,6 +107,7 @@ class FSPersistence(Persistence):
     RESPONSE_FILE = "response.json"
     HOMEPATH = os.path.expanduser("~")
     CREDENTIALS_FILE = "credentials"
+    METADATA_FILE = "metadata.unmock.yml"
 
     def __init__(self, token, path=None):
         super(FSPersistence, self).__init__(token)
@@ -130,10 +132,10 @@ class FSPersistence(Persistence):
     def hash_dir(self):
         return os.path.join(self.unmock_dir, "save")
 
-    def _outdir(self, hash):
+    def _outdir(self, hash, *args):
         hashdir = os.path.join(self.hash_dir, hash)
         makedirs(hashdir)
-        return hashdir
+        return os.path.join(hashdir, *args)
 
     def __write_to_hashed(self, hash, key, content):
         """
@@ -149,7 +151,7 @@ class FSPersistence(Persistence):
         if content is not None:
             old_contents = self.__load_from_hashed(hash, key) or dict()
             old_contents[key] = content
-            with open(os.path.join(self._outdir(hash), FSPersistence.RESPONSE_FILE), 'w') as fp:
+            with open(self._outdir(hash, FSPersistence.RESPONSE_FILE), 'w') as fp:
                 json.dump(old_contents, fp, indent=2)
                 fp.flush()
             return True
@@ -165,7 +167,7 @@ class FSPersistence(Persistence):
         :return: The decoded content from filename if successful, None otherwise
         """
         try:
-            with open(os.path.join(self._outdir(hash), FSPersistence.RESPONSE_FILE)) as fp:
+            with open(self._outdir(hash, FSPersistence.RESPONSE_FILE)) as fp:
                 return json.load(fp).get(key)
         except (json.JSONDecodeError, OSError, IOError):
             # JSONDecoder when it fails decoding content
@@ -178,7 +180,14 @@ class FSPersistence(Persistence):
         self.__write_to_hashed(hash=hash, key=FSPersistence.HEADERS_KEY, content=headers)
 
     def save_metadata(self, hash, data):
-        pass
+        target = self._outdir(hash, FSPersistence.METADATA_FILE)
+        content = dict()
+        if os.path.exists(target):
+            with open(target) as mtdfd:
+                content = yaml.safe_load(mtdfd)
+        content.update(data)
+        with open(target, 'w') as mtdfd:
+            yaml.safe_dump(content, mtdfd)
 
     def save_body(self, hash, body=None):
         if isinstance(body, str):
