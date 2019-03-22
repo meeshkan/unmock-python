@@ -1,11 +1,12 @@
 import requests
+from six import text_type
 
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-from .utils import get_logger, is_text
+from .utils import get_logger
 
 # Tests that actually send through to the unmock service and make sure it's all formed correctly
 TIMEOUT = 10
@@ -40,7 +41,7 @@ def test_behance(unmock_and_reset):
     response = requests.get("{url}/{id}/comments{api}".format(url=URL, id=projects[0]["id"], api=API), timeout=TIMEOUT)
     comments = response.json().get("comments")
     assert comments, "Expecting a non-empty list of 'comments' in response"
-    assert is_text(comments[0]["comment"]), "Comments should be text"
+    assert isinstance(comments[0]["comment"], text_type), "Comments should be text"
 
 
 def test_hubapi(unmock_and_reset):
