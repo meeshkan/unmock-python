@@ -200,7 +200,7 @@ class UnmockOptions:
             "path": unmock_data.path or "",
             "hostname": host or "",
             "method": unmock_data.method or "",
-            "headers": json.dumps(unmock_data.headers)
+            "headers": json.dumps(unmock_data.headers_qp)
         }
         if self._ignore is not None:
             qs["ignore"] = json.dumps(self._ignore)
