@@ -149,7 +149,7 @@ class FSPersistence(Persistence):
         :type dictionary, string
         """
         if content is not None:
-            old_contents = self.__load_from_hashed(hash, key) or dict()
+            old_contents = self.__load_from_hashed(hash) or dict()
             old_contents[key] = content
             with open(self._outdir(hash, FSPersistence.RESPONSE_FILE), 'w') as fp:
                 json.dump(old_contents, fp, indent=2)
@@ -157,7 +157,7 @@ class FSPersistence(Persistence):
             return True
         return False
 
-    def __load_from_hashed(self, hash, key):
+    def __load_from_hashed(self, hash, key=None):
         """
         Attempts to load content from the filename located as the hash directory
         :param hash: A story hash
@@ -168,7 +168,10 @@ class FSPersistence(Persistence):
         """
         try:
             with open(self._outdir(hash, FSPersistence.RESPONSE_FILE)) as fp:
-                return json.load(fp).get(key)
+                cached = json.load(fp)
+                if key is None:
+                    return cached
+                return cached.get(key)
         except (json.JSONDecodeError, OSError, IOError):
             # JSONDecoder when it fails decoding content
             # OSError is for when the file is not found on Python3
