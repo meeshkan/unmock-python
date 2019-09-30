@@ -1,19 +1,11 @@
 import fnmatch
-from six.moves.urllib.parse import urlencode
-from six.moves import http_client
-try:
-  from http import HTTPStatus
-except ImportError:
-  class HTTPStatus:
-    OK = 200
-
 from .utils import parse_url
 
 __all__ = ["UnmockOptions"]
 
 
 class UnmockOptions:
-  def __init__(self, use_in_production=False, whitelist=None):
+  def __init__(self, replyFn, whitelist=None):
     """
     Creates a new UnmockOptions object, customizing the use of Unmock
     :param use_in_production: Whether or not to use unmock in production, based on `ENV` environment variable.
@@ -26,7 +18,7 @@ class UnmockOptions:
 
     """
 
-    self.use_in_production = use_in_production
+    self.replyTo = replyFn
     self.whitelist = whitelist if whitelist is not None else [
         "127.0.0.1", "127.0.0.0", "localhost"]
     if not isinstance(self.whitelist, list):

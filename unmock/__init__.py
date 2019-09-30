@@ -1,26 +1,23 @@
 from .__version__ import __version__  # Conform to PEP-0396
 
 from . import pytest
-from .core import UnmockOptions, exceptions
+from .core import UnmockOptions, Request
+
+
+def on(**kwargs):
+  """Shorthand for initialize"""
+  initialize(**kwargs)
 
 
 def init(**kwargs):
   """Shorthand for initialize"""
-  return initialize(**kwargs)
+  initialize(**kwargs)
 
 
 def initialize(**kwargs):
   """
   Initialize the unmock library for capturing API calls.
   Pass keyword arguments to be used for internal options:
-
-  :param save: whether or not to save all mocks (when using boolean value), or a list of specific story IDs to
-      save. Deafult to False.
-  :type save boolean, list of strings
-
-  :param use_in_production: Whether or not to use unmock in production, based on `ENV` environment variable.
-      Default to False.
-  :type use_in_production boolean
 
   :param whitelist: An optional list (or string) of URLs to whitelist, so that you may access them without unmock
       intercepting the calls. Defaults to ["127.0.0.1", "127.0.0.0", "localhost"]
@@ -31,10 +28,8 @@ def initialize(**kwargs):
 
   core.http.initialize(unmock_options)
 
-  return unmock_options
 
-
-def reset():
+def off():
   """
   Removes Unmock automatic API call capturing, restoring normal behaviour.
   """

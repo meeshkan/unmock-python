@@ -1,6 +1,4 @@
 import sys
-import os
-import json
 from six.moves.urllib.parse import urlsplit, SplitResult
 try:
   from unittest import mock
@@ -9,8 +7,8 @@ except ImportError:
 
 from ..__version__ import __version__
 
-__all__ = ["Patchers", "parse_url",
-           "is_python_version_at_least", "makedirs"]
+__all__ = ["PATCHERS", "parse_url",
+           "is_python_version_at_least"]
 
 
 def is_python_version_at_least(version):
@@ -63,7 +61,12 @@ class Patchers:
 
 
 def parse_url(url):
-  """Parses a url using urlsplit, returning a SplitResult. Adds https:// scheme if netloc is empty."""
+  """
+  Parses a url using urlsplit, returning a SplitResult. Adds https:// scheme if netloc is empty.
+  Parse a URL into 5 components:
+    <scheme>://<netloc>/<path>?<query>#<fragment>
+    Return a 5-tuple: (scheme, netloc, path, query, fragment).
+  """
   parsed_url = urlsplit(url)
   if parsed_url.scheme == "" or parsed_url.netloc == "":
     # To make `urlsplit` work we need to provide the protocol; this is arbitrary (and can even be "//")
@@ -71,9 +74,4 @@ def parse_url(url):
   return parsed_url
 
 
-def makedirs(path):
-  """Quiet makedirs (similar to Python3 ok_exists=True flag)"""
-  try:
-    os.makedirs(path)
-  except OSError:
-    pass
+PATCHERS = Patchers()
