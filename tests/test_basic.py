@@ -11,6 +11,6 @@ def replyFn(request):
 
 def test_reply_fn():
   unmock.on(replyFn=replyFn)
-  res = requests.get("http://www.example.com/?name=foo")
+  res = requests.get("https://www.example.com/?name=foo")
   assert res.text == "Hello foo!"
   unmock.off()

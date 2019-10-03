@@ -8,9 +8,11 @@ class UnmockOptions:
   def __init__(self, replyFn=None, whitelist=None):
     """
     Creates a new UnmockOptions object, customizing the use of Unmock
-    :param use_in_production: Whether or not to use unmock in production, based on `ENV` environment variable.
-        Default to False.
-    :type use_in_production boolean
+    :param replyFn: A function that gets called with a Request object, and replies with a dictionary with the following keys:
+        content: string/json - the body of the response (default empty string)
+        status: int - the status code for the response (default 200)
+        headers: dictionary - the headers for the response (default empty dictionary)
+    :type replyFn Callable
 
     :param whitelist: An optional list (or string) of URLs to whitelist, so that you may access them without unmock
         intercepting the calls. Defaults to ["127.0.0.1", "127.0.0.0", "localhost"]

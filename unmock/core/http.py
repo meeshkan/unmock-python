@@ -5,7 +5,7 @@ import email.parser
 from .utils import PATCHERS, is_python_version_at_least
 from six.moves import http_client
 from .options import UnmockOptions
-from .request import Request, Response
+from .request import Request
 try:
   from unittest import mock
 except ImportError:
@@ -42,7 +42,6 @@ def initialize(unmock_options):
 
   We mock the "low level" API (instead of the `request` method, we mock the `putrequest`, `putheader`, `endheaders`
   and `getresponse` methods; the `request` method calls these sequentially).
-  To save the body of the response, we also mock the HTTPResponse's `read` method.
 
   HTTPSConnection also uses the regular HTTPConnection methods under the hood -> hurray!
 
@@ -66,10 +65,12 @@ def initialize(unmock_options):
     :param skip_accept_encoding
     :type skip_accept_encoding bool
     """
-    host = conn._dns_host
+    # Extract host and port, create the request as normal
+    host = conn.host
     port = conn.port
     original_putrequest(conn, method, url, skip_host, skip_accept_encoding)
-    if not unmock_options._is_host_whitelisted(url):
+    if not unmock_options._is_host_whitelisted(host):
+      # Attach the unmock object to this connection for information aggregation
       req = Request(host, port, url, method)
       setattr(conn, U_KEY, req)
 
@@ -83,11 +84,10 @@ def initialize(unmock_options):
     :param values
     :type values list, bytes
     """
-
-    original_putheader(conn, header, *values)
+    original_putheader(conn, header, *values)  # Add header to the connection
     if hasattr(conn, U_KEY):
       req = getattr(conn, U_KEY)
-      req.add_header(header, *values)
+      req.add_header(header, *values)  # And aggregate if needed
 
   # The encode_chunked parameters was added in Python 3.6
   if is_python_version_at_least("3.6"):
@@ -104,13 +104,11 @@ def initialize(unmock_options):
       :type encode_chunked bool
       """
       if unmock_options._is_host_whitelisted(conn.host):
+        # endheaders causes the socket to connect and sends data, so only call original
+        # function if the connection is whitelisted
         original_endheaders(conn, message_body, encode_chunked=encode_chunked)
       elif hasattr(conn, U_KEY):
-        req = getattr(conn, U_KEY)
-        if message_body:
-          req.add_body(message_body)
-        unmock_override_get_response(conn, req)
-
+        internal_unmock_end_headers(conn, message_body)
   else:
     def unmock_end_headers(conn, message_body=None):
       """endheaders mock; signals the end of the HTTP request.
@@ -124,24 +122,26 @@ def initialize(unmock_options):
       if unmock_options._is_host_whitelisted(conn.host):
         original_endheaders(conn, message_body)
       elif hasattr(conn, U_KEY):
-        req = getattr(conn, U_KEY)
-        if message_body:
-          req.add_body(message_body)
-        unmock_override_get_response(conn, req)
+        internal_unmock_end_headers(conn, message_body)
 
-  def unmock_override_get_response(conn, req):
-    reply = unmock_options.replyTo(req)
+  def internal_unmock_end_headers(conn, message_body=None):
+    req = getattr(conn, U_KEY)
+    if message_body:  # Add body if needed
+      req.add_body(message_body)
+
+    reply = unmock_options.replyTo(req)  # Get the reply for this Request
     content = reply.get("content", "")
-    m = MockSocket(content)
+    m = MockSocket(content)  # MockSocket for HTTPResponse generation
     res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
 
-    res.chunked = False
+    res.chunked = False  # Parameters to keep HTTPResponse at bay while reading the response
     res.length = len(content)
     res.version = (1, 1)
     res.status = reply.get("status", 200)
     res.reason = http_client.responses[res.status]
 
     # Generate the bytes buffer for the msg attribute
+    # (mostly copied from httplib)
     _buffer = []
     for k, v in reply.get("headers", dict()).items():
       val = []
