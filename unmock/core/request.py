@@ -1,6 +1,7 @@
 import json
 from six.moves.urllib.parse import parse_qs
 from six.moves.http_client import responses
+from .utils import parse_url
 try:
   from unittest import mock
 except ImportError:
@@ -8,10 +9,15 @@ except ImportError:
 
 
 class Request:
-  def __init__(self, host, endpoint, method):
+  def __init__(self, url, method):
+    self.url = url
+    (_, host, endpoint, query, _) = parse_url(url)
     self.host = host
     self.endpoint = endpoint
     self.method = method
+    if query:
+      self.add_query(query)
+
     self.headers = dict()
     self.data = None
     self.qs = dict()

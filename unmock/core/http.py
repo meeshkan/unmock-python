@@ -1,5 +1,8 @@
 import os
-from .utils import PATCHERS, parse_url, is_python_version_at_least
+from io import BytesIO
+import socket
+import email.parser
+from .utils import PATCHERS, is_python_version_at_least
 from six.moves import http_client
 from .options import UnmockOptions
 from .request import Request, Response
@@ -11,6 +14,25 @@ except ImportError:
 __all__ = ["initialize", "reset"]
 
 U_KEY = "unmock"
+
+
+class MockSocket(socket.socket):
+  def __init__(self, content):
+    self.content = content
+    self.io = BytesIO(content.encode(
+        'utf-8') if hasattr(content, 'encode') else content)
+
+  def makefile(self, *args, **kw):
+    m = mock.Mock()
+    m.read.return_value = self.content
+
+    def readinto(b):
+      return self.io.readinto(b)
+    m.readinto.side_effect = readinto
+    return m
+
+  def close(self, *args, **kw):
+    pass
 
 
 def initialize(unmock_options):
@@ -44,17 +66,10 @@ def initialize(unmock_options):
     :param skip_accept_encoding
     :type skip_accept_encoding bool
     """
-    (_, host, endpoint, query, _) = parse_url(url)
-
-    if unmock_options._is_host_whitelisted(url):
-      original_putrequest(conn, method, url, skip_host, skip_accept_encoding)
-    else:
-      req = Request(host, endpoint, method)
-      if query:
-        req.add_query(query)
+    original_putrequest(conn, method, url, skip_host, skip_accept_encoding)
+    if not unmock_options._is_host_whitelisted(url):
+      req = Request(url, method)
       setattr(conn, U_KEY, req)
-      print("Put Request")
-      print(conn)
 
   def unmock_putheader(conn, header, *values):
     """putheader mock; called sequentially after the putrequest.
@@ -67,9 +82,8 @@ def initialize(unmock_options):
     :type values list, bytes
     """
 
-    if unmock_options._is_host_whitelisted(conn.host):
-      original_putheader(conn, header, *values)
-    elif hasattr(conn, U_KEY):
+    original_putheader(conn, header, *values)
+    if hasattr(conn, U_KEY):
       req = getattr(conn, U_KEY)
       req.add_header(header, *values)
 
@@ -93,6 +107,7 @@ def initialize(unmock_options):
         req = getattr(conn, U_KEY)
         if message_body:
           req.add_body(message_body)
+        unmock_override_get_response(conn, req)
 
   else:
     def unmock_end_headers(conn, message_body=None):
@@ -110,31 +125,37 @@ def initialize(unmock_options):
         req = getattr(conn, U_KEY)
         if message_body:
           req.add_body(message_body)
+        unmock_override_get_response(conn, req)
 
-  def unmock_get_response(conn):
-    """getresponse mock; fetches the response from the connection made.
+  def unmock_override_get_response(conn, req):
+    reply = unmock_options.replyTo(req)
+    m = MockSocket(reply["content"])
+    res = http_client.HTTPResponse(m, method=req.method, url=req.url)
 
-    :param conn
-    :type conn HTTPConnection
-    """
-    if unmock_options._is_host_whitelisted(conn.host):
-      return original_getresponse(conn)
-    elif hasattr(conn, U_KEY):
-      req = getattr(conn, U_KEY)
-      res = Response(unmock_options.replyTo(req))
-      return res.mock()
+    res.chunked = False
+    res.length = len(reply["content"])
+    res.version = (1, 1)
+    res.status = reply.get("status", 200)
+    res.reason = http_client.responses[res.status]
 
-  def unmock_response_read(res, amt=None):
-    """HTTPResponse.read mock;
+    # Generate the bytes buffer for the msg attribute
+    _buffer = []
+    for k, v in reply.get("headers", dict()).items():
+      val = []
+      v = v if isinstance(v, list) else [v]
+      for vv in v:
+        if hasattr(vv, 'encode'):
+          val.append(vv.encode('latin-1'))
+        elif isinstance(one_value, int):
+          val.append(str(vv).encode('ascii'))
+      _buffer.append(k.encode('ascii') + b':' + b'\r\n\t'.join(val))
+    hstring = b''.join(_buffer).decode('iso-8859-1')
+    res.msg = res.headers = email.parser.Parser(
+        _class=http_client.HTTPMessage).parsestr(hstring)
 
-    :param res
-    :type res HTTPResponse
-    :param amt
-    :type amt int
-    """
-    if isinstance(res, Response):
-      return res.read(amt)
-    return original_response_read(res, amt)
+    conn.getresponse = lambda: res
+    conn.__response = res
+    conn.__state = http_client._CS_REQ_SENT
 
   # Create the patchers and mock away!
   original_putrequest = PATCHERS.patch(
@@ -143,10 +164,6 @@ def initialize(unmock_options):
       "six.moves.http_client.HTTPConnection.putheader", unmock_putheader)
   original_endheaders = PATCHERS.patch(
       "six.moves.http_client.HTTPConnection.endheaders", unmock_end_headers)
-  original_getresponse = PATCHERS.patch(
-      "six.moves.http_client.HTTPConnection.getresponse", unmock_get_response)
-  original_response_read = PATCHERS.patch(
-      "six.moves.http_client.HTTPResponse.read", unmock_response_read)
 
   PATCHERS.start()
 
