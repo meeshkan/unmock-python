@@ -2,6 +2,10 @@ import multiprocessing
 from six.moves import BaseHTTPServer
 
 
+def empty_reply(_):
+  return {}
+
+
 def one_hit_server():
   def init_server():
     srv = BaseHTTPServer.HTTPServer(("127.0.0.1", 7331), RequestHandler)

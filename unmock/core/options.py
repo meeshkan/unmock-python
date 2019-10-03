@@ -5,7 +5,7 @@ __all__ = ["UnmockOptions"]
 
 
 class UnmockOptions:
-  def __init__(self, replyFn, whitelist=None):
+  def __init__(self, replyFn=None, whitelist=None):
     """
     Creates a new UnmockOptions object, customizing the use of Unmock
     :param use_in_production: Whether or not to use unmock in production, based on `ENV` environment variable.
@@ -18,7 +18,7 @@ class UnmockOptions:
 
     """
 
-    self.replyTo = replyFn
+    self.replyTo = replyFn if replyFn is not None else (lambda _: dict())
     self.whitelist = whitelist if whitelist is not None else [
         "127.0.0.1", "127.0.0.0", "localhost"]
     if not isinstance(self.whitelist, list):

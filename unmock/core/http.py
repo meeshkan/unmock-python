@@ -129,11 +129,12 @@ def initialize(unmock_options):
 
   def unmock_override_get_response(conn, req):
     reply = unmock_options.replyTo(req)
-    m = MockSocket(reply["content"])
+    content = reply.get("content", "")
+    m = MockSocket(content)
     res = http_client.HTTPResponse(m, method=req.method, url=req.url)
 
     res.chunked = False
-    res.length = len(reply["content"])
+    res.length = len(content)
     res.version = (1, 1)
     res.status = reply.get("status", 200)
     res.reason = http_client.responses[res.status]

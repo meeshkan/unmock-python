@@ -57,4 +57,4 @@ class patch:
     return initialize(**self.kwargs)
 
   def __exit__(self, exc_type, exc_val, exc_tb):
-    reset()
+    off()
