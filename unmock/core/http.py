@@ -1,11 +1,38 @@
 import os
-from .utils import Patchers, parse_url, is_python_version_at_least
+from io import BytesIO
+import socket
+import email.parser
+from .utils import PATCHERS, is_python_version_at_least
 from six.moves import http_client
-from . import PATCHERS
 from .options import UnmockOptions
-from .utils import unmock_user_agent
+from .request import Request, Response
+try:
+  from unittest import mock
+except ImportError:
+  import mock
 
 __all__ = ["initialize", "reset"]
+
+U_KEY = "unmock"
+
+
+class MockSocket(socket.socket):
+  def __init__(self, content):
+    self.content = content
+    self.io = BytesIO(content.encode(
+        'utf-8') if hasattr(content, 'encode') else content)
+
+  def makefile(self, *args, **kw):
+    m = mock.Mock()
+    m.read.return_value = self.content
+
+    def readinto(b):
+      return self.io.readinto(b)
+    m.readinto.side_effect = readinto
+    return m
+
+  def close(self, *args, **kw):
+    pass
 
 
 def initialize(unmock_options):
@@ -22,6 +49,7 @@ def initialize(unmock_options):
   :param unmock_options: An UnmockOptions file with user-behaviour customizations
   :type unmock_options UnmockOptions
   """
+
   def unmock_putrequest(conn, method, url, skip_host=False,
                         skip_accept_encoding=False):
     """putrequest mock; called initially after the HTTPConnection object has been created. Contains information
@@ -38,8 +66,10 @@ def initialize(unmock_options):
     :param skip_accept_encoding
     :type skip_accept_encoding bool
     """
-
     original_putrequest(conn, method, url, skip_host, skip_accept_encoding)
+    if not unmock_options._is_host_whitelisted(url):
+      req = Request(url, method)
+      setattr(conn, U_KEY, req)
 
   def unmock_putheader(conn, header, *values):
     """putheader mock; called sequentially after the putrequest.
@@ -53,12 +83,14 @@ def initialize(unmock_options):
     """
 
     original_putheader(conn, header, *values)
+    if hasattr(conn, U_KEY):
+      req = getattr(conn, U_KEY)
+      req.add_header(header, *values)
 
   # The encode_chunked parameters was added in Python 3.6
   if is_python_version_at_least("3.6"):
     def unmock_end_headers(conn, message_body=None, encode_chunked=False):
       """endheaders mock; signals the end of the HTTP request.
-      At this point we should have all the data to make the request to the unmock service.
       NOTE: We drop the bare asterisk for Python2 compatibility.
       See https://stackoverflow.com/questions/2965271/forced-naming-of-parameters-in-python/14298976#14298976
 
@@ -69,9 +101,14 @@ def initialize(unmock_options):
       :param encode_chunked
       :type encode_chunked bool
       """
+      if unmock_options._is_host_whitelisted(conn.host):
+        original_endheaders(conn, message_body, encode_chunked=encode_chunked)
+      elif hasattr(conn, U_KEY):
+        req = getattr(conn, U_KEY)
+        if message_body:
+          req.add_body(message_body)
+        unmock_override_get_response(conn, req)
 
-      return original_endheaders(
-          conn, message_body, encode_chunked=encode_chunked)
   else:
     def unmock_end_headers(conn, message_body=None):
       """endheaders mock; signals the end of the HTTP request.
@@ -82,26 +119,44 @@ def initialize(unmock_options):
       :param message_body
       :type message_body string
       """
-      return original_endheaders(conn, message_body)
+      if unmock_options._is_host_whitelisted(conn.host):
+        original_endheaders(conn, message_body)
+      elif hasattr(conn, U_KEY):
+        req = getattr(conn, U_KEY)
+        if message_body:
+          req.add_body(message_body)
+        unmock_override_get_response(conn, req)
 
-  def unmock_get_response(conn):
-    """getresponse mock; fetches the response from the connection made.
-    Here we just need to redirect and use the getresponse from the linked unmock connection, output some messages
-    and update the stories.
+  def unmock_override_get_response(conn, req):
+    reply = unmock_options.replyTo(req)
+    content = reply.get("content", "")
+    m = MockSocket(content)
+    res = http_client.HTTPResponse(m, method=req.method, url=req.url)
 
-    :param conn
-    :type conn HTTPConnection
-    """
-    return original_getresponse(conn)
+    res.chunked = False
+    res.length = len(content)
+    res.version = (1, 1)
+    res.status = reply.get("status", 200)
+    res.reason = http_client.responses[res.status]
 
-  def unmock_response_read(res, amt=None):
-    """HTTPResponse.read mock;
-    :param res
-    :type res HTTPResponse
-    :param amt
-    :type amt int
-    """
-    return original_response_read(res, amt)
+    # Generate the bytes buffer for the msg attribute
+    _buffer = []
+    for k, v in reply.get("headers", dict()).items():
+      val = []
+      v = v if isinstance(v, list) else [v]
+      for vv in v:
+        if hasattr(vv, 'encode'):
+          val.append(vv.encode('latin-1'))
+        elif isinstance(one_value, int):
+          val.append(str(vv).encode('ascii'))
+      _buffer.append(k.encode('ascii') + b':' + b'\r\n\t'.join(val))
+    hstring = b''.join(_buffer).decode('iso-8859-1')
+    res.msg = res.headers = email.parser.Parser(
+        _class=http_client.HTTPMessage).parsestr(hstring)
+
+    conn.getresponse = lambda: res
+    conn.__response = res
+    conn.__state = http_client._CS_REQ_SENT
 
   # Create the patchers and mock away!
   original_putrequest = PATCHERS.patch(
@@ -110,10 +165,6 @@ def initialize(unmock_options):
       "six.moves.http_client.HTTPConnection.putheader", unmock_putheader)
   original_endheaders = PATCHERS.patch(
       "six.moves.http_client.HTTPConnection.endheaders", unmock_end_headers)
-  original_getresponse = PATCHERS.patch(
-      "six.moves.http_client.HTTPConnection.getresponse", unmock_get_response)
-  original_response_read = PATCHERS.patch(
-      "six.moves.http_client.HTTPResponse.read", unmock_response_read)
 
   PATCHERS.start()
 

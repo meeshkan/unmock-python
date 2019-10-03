@@ -1,10 +1,7 @@
-from . import exceptions
+from .utils import *
 from .http import *
 from .options import *
-from .utils import *  # Imported first as it defines the Patchers object
-
-# package-wide variables to be used by different capturers of API calls (whether it is http, flask, django, whatever)
-PATCHERS = Patchers()
+from .request import *
 
 
-__all__ = ["initialize", "reset", "exceptions"]
+__all__ = ["initialize", "reset", "Request"]

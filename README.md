@@ -1,5 +1,6 @@
 # [Unmock](https://www.unmock.io/) (Python SDK)
-[![CircleCI](https://circleci.com/gh/unmock/unmock-python.svg?style=shield)](https://circleci.com/gh/unmock/unmock-python) 
+
+[![CircleCI](https://circleci.com/gh/unmock/unmock-python.svg?style=shield)](https://circleci.com/gh/unmock/unmock-python)
 [![codecov](https://codecov.io/gh/unmock/unmock-python/branch/dev/graph/badge.svg)](https://codecov.io/gh/unmock/unmock-python)
 [![PyPI version](https://badge.fury.io/py/unmock.svg)](https://badge.fury.io/py/unmock)
 
@@ -33,12 +34,6 @@ We're open to more requests - just [let us know](mailto:contact@unmock.io)!
     - [Tests](#tests)
     - [Development](#development)
     - [unmock.io](#unmockio)
-    - [Scoping](#scoping)
-    - [Saving mocks](#saving-mocks)
-    - [Ignoring aspects of a mock](#ignoring-aspects-of-a-mock)
-    - [Adding a signature](#adding-a-signature)
-    - [Whitelisting API](#whitelisting-api)
-    - [unmock.io tokens](#unmockio-tokens)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -56,7 +51,7 @@ yet, or to tweak return values from the unmock service, you can consult
 the URLs printed to the command line by unmock.
 
 We intend to offer Python2.7 support quite soon, along with other common
-libraries such as `aiohttp`, `pycurl`, etc.  
+libraries such as `aiohttp`, `pycurl`, etc.
 
 ## Install
 
@@ -71,7 +66,7 @@ $ pip install unmock
 In your unit tests, you can invoke unmock in several ways:
 
 1. If you're using pytest for your tests, you can either use the unmock
-fixture (you don't even need to import unmock!) -
+   fixture (you don't even need to import unmock!) -
 
 ```python
 import pytest
@@ -84,11 +79,13 @@ def test_behance(unmock_local):
 
 ... or you may want to use unmock for all your tests, in which case you
 can simply use the `--unmock` flag for pytest:
+
 ```bash
 pytest tests --unmock
 ```
 
 2. You can control use unmock in a scoped manner using context managers:
+
 ```
 # do stuff
 with unmock.patch():
@@ -100,10 +97,11 @@ real_response = requests.get("https://www.example.com/")  # won't be mocked
 with unmock.patch() as opts:
     # can modify certain behaviour aspects via `opts` object now too
     response = requests.get("https://www.example.com/")
-``` 
+```
 
 3. You can have fine grained control over unmock using the `init` and
-`reset` methods, and modify the `UnmockOptions` object during runtime:
+   `reset` methods, and modify the `UnmockOptions` object during runtime:
+
 ```python
 import unmock
 
@@ -116,7 +114,6 @@ unmock.reset()
 res3 = requests.get("https://www.example.com")  # will not be mocked
 ```
 
-
 Unmock will then either serve JIT semantically functionally correct
 mocks from its database or an empty JSON object for unmocked APIs that
 can be filled in by the user. The address of these editable objects is
@@ -124,133 +121,11 @@ printed to the command line during tests.
 
 ### Development
 
-After you create your flask, django, or own server, call
-
-
-```python
-unmock_options = unmock.init()
-unmock_options.ignore("story")
-
-# equivalent to calling:
-unmock.init(ignore="story")
-```
-
-This has the same effect as activating unmock in your tests.
-It will intercept HTTP traffic and serve semantically and functionally
-adequate mocks of the APIs in the unmock catalogue.
-The main difference is the result of `ignore("story")` passed to unmock
-options, which tells the service to ignore the order of mocked requests.
-Always use this option when the order of mocked data does not matter,
-i.e. when you are in sandbox or development mode.
-For users of the [unmock.io](https://www.unmock.io) service, this will
-help unmock better organize your mocks in its web dashboard.
-
 ### unmock.io
 
 The URLs printed to the command line are hosted by unmock.io. You can
 consult the documentation about that service
 [here](https://www.unmock.io/docs).
-
-### Scoping
-As a handy shortcut to initializing and reseting the capturing of API
-calls, we also offer the use of context manager via `unmock.patch()`.
-`patch` accepts as parameters anything that `init` accepts.
-
-### Saving mocks
-
-All mocks can be saved to a folder called `.unmock` in your user's home
-directory by adding a `save` field to the unmock options object like so:
-
-```python
-unmock_options = unmock.init(save=True)
-```
-You can also specify a specific location to save the directory:
-```python
-unmock_options = unmock.init(save=True, path=".")  # Saves in current path
-```
-Unmock refers to every mock by a unique hash. Individual mocks or groups
-of mocks can be saved by setting save to either a single hash or an
-array of hashes like so:
-
-```python
-unmock_options = unmock.init(save=["ahash", "anotherhash", "yetanotherhash"])
-```
-
-### Ignoring aspects of a mock
-
-Sometimes, you would like for two mocks of slightly API calls to be
-treated as equivalent by unmock. For example, you may want all `GET`
-calls to the same path with different headers to be served the same
-mock. To do this, use the `ignore` field of the unmock options object.
-You can do this while initializing unmock or afterwards (as shown before
-with ignoring `"story"`):
-
-```python
-# Option A:
-unmock_options = unmock.init()
-unmock_options.ignore("headers", "story")
-# Option B:
-unmock.init(ignore=["headers", "story"])
-```
-
-The following fields may be ignored:
-
-* `headers`: the headers of the request
-* `hostname`: the hostname of the request
-* `method`: the method of the request (ie GET, POST, PUT, DELETE).
-Note that this is *case insensitive*!
-* `path`: the path of the request
-* `story`: the story of the request, meaning its order in a series of requests
-
-Ignore evaluates regular expressions, so you can also pass
-`"headers|path"` instead of `["headers", "path"]`. Furthermore, to
-ignore nested headers, pass a dictionary such as
-`{"headers": "Authorization" }`, or to match against the value of a
-header, `{"headers": { Authorization: "Bearer *" }}`. When using the
-ignore _method_ on the `UnmockOptions` object (returned from a call to `init`),
-you may pass either a list (`*args`) or a dictionary (`**kwargs`).
-
-### Adding a signature
-
-Sometimes, it is useful to sign a mock with a unique signature. This is
-useful, for example, when AB testing code that should serve two
-different mocks for the same endpoint in otherwise similar conditions.
-To do this, use the `signature` field of the unmock options object:
-
-```python
-unmock_options = unmock.init()
-unmock_options.signature = "signature-for-this-particular-test"
-# Equivalent to
-unmock.init(signature="signature-for-this-particular-test")
-```
-
-### Whitelisting API
-
-If you do not want a particular API to be mocked, whitelist it.
-
-```python
-unmock_options = unmock.init()
-unmock_options.whitelist = ["api.hubspot.com", "api.typeform.com"]
-# Equivalent to:
-unmock.init(whitelist=["api.hubspot.com", "api.typeform.com"])
-```
-
-### unmock.io tokens
-
-If you are subscribed to the [unmock.io](https://www.unmock.io) service,
-you can pass your unmock token directly to the unmock object.
-
-```
-unmock.init(token="my-token")
-```
-
-At a certain point this becomes a bit tedious, (even if very readable),
-at which point you will want to create a credentials file. See
-[unmock.io/docs](https://www.unmock.io/docs) for more information on
-credential files.
-Behind the scenes, we automatically create a credentials file for you,
-for caching purposes. With this, subsequent calls to `unmock.init()`
-will read the token from the credential files. 
 
 ## Contributing
 
