@@ -1,10 +1,10 @@
 import pytest
-import unmock
+import unmock as u
 
 
 @pytest.fixture
-def unmock_and_reset():
+def unmock():
   def init(**kwargs):
-    unmock.on(**default_kwargs)
+    u.on(**kwargs)
   yield init
-  unmock.off()
+  u.off()
