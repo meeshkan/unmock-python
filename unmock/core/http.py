@@ -59,16 +59,18 @@ def initialize(unmock_options):
     :type conn HTTPConnection
     :param method
     :type method string
-    :param url
+    :param url - the endpoint on conn
     :type url string
     :param skip_host
     :type skip_host bool
     :param skip_accept_encoding
     :type skip_accept_encoding bool
     """
+    host = conn._dns_host
+    port = conn.port
     original_putrequest(conn, method, url, skip_host, skip_accept_encoding)
     if not unmock_options._is_host_whitelisted(url):
-      req = Request(url, method)
+      req = Request(host, port, url, method)
       setattr(conn, U_KEY, req)
 
   def unmock_putheader(conn, header, *values):
@@ -131,7 +133,7 @@ def initialize(unmock_options):
     reply = unmock_options.replyTo(req)
     content = reply.get("content", "")
     m = MockSocket(content)
-    res = http_client.HTTPResponse(m, method=req.method, url=req.url)
+    res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
 
     res.chunked = False
     res.length = len(content)

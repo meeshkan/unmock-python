@@ -9,18 +9,19 @@ except ImportError:
 
 
 class Request:
-  def __init__(self, url, method):
-    self.url = url
-    (_, host, endpoint, query, _) = parse_url(url)
+  def __init__(self, host, port, endpoint, method):
     self.host = host
     self.endpoint = endpoint
     self.method = method
-    if query:
-      self.add_query(query)
+    self.port = port
 
     self.headers = dict()
     self.data = None
     self.qs = dict()
+
+    _, _, _, query, _ = parse_url(endpoint)
+    if query:
+      self.add_query(query)
 
   def add_qs(self, key, value):
     self.qs[key] = value
