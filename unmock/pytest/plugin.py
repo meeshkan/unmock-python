@@ -1,6 +1,6 @@
 """A pytest plugin for Unmock"""
 import pytest
-from .. import init, reset, UnmockOptions
+from .. import init, UnmockOptions
 
 
 @pytest.fixture(scope="function")
