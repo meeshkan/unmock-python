@@ -26,7 +26,7 @@ commands:
           name: Pytest
           command: |
             coverage run --source unmock -m pytest --junitxml=junit/test-results.xml --ignore-glob=*/plugin_test.py
-            coverage html --fail-under=80
+            coverage html --fail-under=75
             coverage xml
       - run:
           name: Pytest Plugin
