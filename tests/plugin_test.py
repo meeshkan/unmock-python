@@ -6,13 +6,20 @@ import os
 TIMEOUT = 10
 
 
+def pytest_wo(cond):
+  if os.environ.get("USE_UNMOCK"):  # unmock exists, condition should pass
+    assert cond
+  else:
+    # unmock does not exist, condition should fail "silently"
+    with pytest.raises(Exception):
+      # this is done intentionally so catching build errors is easier
+      assert cond
+
+
 def test_pytest_flag():
   response = requests.get("http://www.example.com/",
                           timeout=TIMEOUT)  # Nothing here anyway
-  if os.environ.get("USE_UNMOCK"):
-    assert response.text == ""  # No service is defined so we get an empty response by default
-  else:
-    assert response.text != ""
+  pytest_wo(response.text == "")
 
 
 def test_pytest_flag(unmock):
@@ -22,7 +29,4 @@ def test_pytest_flag(unmock):
 
   response = requests.get("http://www.example.com/",
                           timeout=TIMEOUT)  # Nothing here anyway
-  if os.environ.get("USE_UNMOCK"):
-    assert response.status_code == 303
-  else:
-    assert response.status_code != 303
+  pytest_wo(response.status_code == 303)
