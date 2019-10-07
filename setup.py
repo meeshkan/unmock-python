@@ -14,7 +14,7 @@ REQUIRES_PYTHON = '>=2.7.0,!=3.0*,!=3.1*,!=3.2*,!=3.3*'
 SRC_DIR = 'unmock'  # Relative location wrt setup.py
 
 # Required packages.
-REQUIRED = ["requests", "PyYAML", "six"]
+REQUIRED = ["requests", "six"]
 
 DEV = ["twine", "wheel", "pytest", "coverage"]
 
@@ -26,8 +26,8 @@ SUPPORT = [
     ((3, 3), "mock")  # unittest.mock was added in Python 3.3
 ]
 for (ver, pkg) in SUPPORT:
-    if sys.version_info < ver:
-        REQUIRED.append(pkg)
+  if sys.version_info < ver:
+    REQUIRED.append(pkg)
 
 # Optional packages
 EXTRAS = {'dev': DEV}
@@ -39,40 +39,41 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 # Import the README and use it as the long-description.
 with open(os.path.join(here, 'README.md')) as f:
-    long_description = '\n' + f.read()
+  long_description = '\n' + f.read()
 
 # Load the package's __version__.py module as a dictionary.
 about = dict()
 with open(os.path.join(here, SRC_DIR, '__version__.py')) as f:
-    exec(f.read(), about)
+  exec(f.read(), about)
 
 
 class SetupCommand(Command):
-    """Base class for setup.py commands with no arguments"""
-    user_options = []
+  """Base class for setup.py commands with no arguments"""
+  user_options = []
 
-    def initialize_options(self):
-        pass
+  def initialize_options(self):
+    pass
 
-    def finalize_options(self):
-        pass
+  def finalize_options(self):
+    pass
 
-    @staticmethod
-    def status(s):
-        """Prints things in bold."""
-        print('\n\033[1m{0}\033[0m'.format(s))
+  @staticmethod
+  def status(s):
+    """Prints things in bold."""
+    print('\n\033[1m{0}\033[0m'.format(s))
 
 
 class PushGitTagCommand(SetupCommand):
-    """Supports setup.py tags"""
-    description = "Pushes a git tag"
+  """Supports setup.py tags"""
+  description = "Pushes a git tag"
 
-    def run(self):
-        self.status("Pushing git tags...")
-        os.system("git tag v{about}".format(about=about['__version__']))
-        os.system("git push --tags")
+  def run(self):
+    self.status("Pushing git tags...")
+    os.system("git tag v{about}".format(about=about['__version__']))
+    os.system("git push --tags")
 
-        sys.exit()
+    sys.exit()
+
 
 setup(
     name=NAME,
@@ -104,6 +105,6 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Software Development :: Testing :: Mocking'
     ],
-    entry_points = {'pytest11': ['unmock = unmock.pytest.plugin']},
+    entry_points={'pytest11': ['unmock = unmock.pytest.plugin']},
     cmdclass={'tags': PushGitTagCommand}
 )
