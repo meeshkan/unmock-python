@@ -132,7 +132,11 @@ def initialize(unmock_options):
     reply = unmock_options.replyTo(req)  # Get the reply for this Request
     content = reply.get("content", "")
     m = MockSocket(content)  # MockSocket for HTTPResponse generation
-    res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
+    if is_python_version_at_least("3.0"):
+      # method, url were added later on
+      res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
+    else:
+      res = http_client.HTTPResponse(m)
 
     res.chunked = False  # Parameters to keep HTTPResponse at bay while reading the response
     res.length = len(content)
