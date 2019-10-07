@@ -26,17 +26,15 @@ commands:
           name: Pytest
           command: |
             coverage run --source unmock -m pytest --junitxml=junit/test-results.xml --ignore-glob=*/plugin_test.py
-            coverage html --fail-under=80
+            coverage html --fail-under=75
             coverage xml
       - run:
           name: Pytest Plugin
           command: |
             # Should succeed - expected to raise a warning and catch it with pytest
             pytest tests/plugin_test.py
-            # Test should fail (so we inverse exit codes)
-            bash -c "USE_UNMOCK=True pytest -sx tests/plugin_test.py; if [[ \$? -eq 0 ]] ; then exit 1 ; else exit 0 ; fi"
             # Test should succeed - unmock up and running
-            USE_UNMOCK=True pytest tests/plugin_test.py --unmock
+            pytest tests/plugin_test.py --unmock
       - when:
           condition: << parameters.publish >>
           steps:
@@ -65,51 +63,51 @@ commands:
 
 jobs:
   # Find tags here: https://circleci.com/docs/2.0/docker-image-tags.json
-  linux27:  # Python 2.7.16
+  linux27: # Python 2.7.16
     docker:
       - image: circleci/python:2.7.16
     steps:
-    - setup
-    - test:
-        publish: true
+      - setup
+      - test:
+          publish: true
 
   linux34:
     docker:
       - image: circleci/python:3.4
     steps:
-    - setup
-    - test
+      - setup
+      - test
 
   linux35:
     docker:
       - image: circleci/python:3.5
     steps:
-    - setup
-    - test
+      - setup
+      - test
 
   linux36:
     docker:
       - image: circleci/python:3.6.8
     steps:
-    - setup
-    - test:
-        publish: true
+      - setup
+      - test:
+          publish: true
 
-  linux37:  # Python 3.7.5 RC version
+  linux37: # Python 3.7.5 RC version
     docker:
       - image: circleci/python:3.7-rc
     steps:
-    - setup
-    - test
-  
+      - setup
+      - test
+
   macOS36:
     macos:
       # https://circle-macos-docs.s3.amazonaws.com/image-manifest/build-430/index.html
       # Python 3.6.5, Darwin 17.4.0, macOS 10.13.3
       xcode: "9.4.1"
     steps:
-    - setup
-    - test
+      - setup
+      - test
 
   macOS37:
     macos:
@@ -117,20 +115,20 @@ jobs:
       # Python 3.7.2, Darwin 18.2.0, macOS 10.14.3
       xcode: "10.2.0"
     steps:
-    - setup
-    - test
+      - setup
+      - test
 
   deploy:
     docker:
       - image: circleci/python:3.6.8
     steps:
-    - setup
-    - add_ssh_keys:
-        fingerprints:
-          - "2f:9a:8b:13:75:82:e8:62:be:be:e4:d3:10:fa:09:fe"
-    - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
-    - build-task
-    - deploy-task
+      - setup
+      - add_ssh_keys:
+          fingerprints:
+            - "2f:9a:8b:13:75:82:e8:62:be:be:e4:d3:10:fa:09:fe"
+      - run: git config credential.helper "/bin/bash ./.circleci/git-credentials-helper.sh"
+      - build-task
+      - deploy-task
 
 workflows:
   version: 2

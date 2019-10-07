@@ -1,5 +1,5 @@
 import os
-from io import BytesIO
+from io import BytesIO, StringIO
 import socket
 import email.parser
 from .utils import PATCHERS, is_python_version_at_least
@@ -23,7 +23,7 @@ class MockSocket(socket.socket):
         'utf-8') if hasattr(content, 'encode') else content)
 
   def makefile(self, *args, **kw):
-    m = mock.Mock()
+    m = mock.MagicMock()
     m.read.return_value = self.content
 
     def readinto(b):
@@ -132,7 +132,11 @@ def initialize(unmock_options):
     reply = unmock_options.replyTo(req)  # Get the reply for this Request
     content = reply.get("content", "")
     m = MockSocket(content)  # MockSocket for HTTPResponse generation
-    res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
+    if is_python_version_at_least("3.0"):
+      # method, url were added later on
+      res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
+    else:
+      res = http_client.HTTPResponse(m)
 
     res.chunked = False  # Parameters to keep HTTPResponse at bay while reading the response
     res.length = len(content)
@@ -149,12 +153,15 @@ def initialize(unmock_options):
       for vv in v:
         if hasattr(vv, 'encode'):
           val.append(vv.encode('latin-1'))
-        elif isinstance(one_value, int):
+        elif isinstance(vv, int):
           val.append(str(vv).encode('ascii'))
       _buffer.append(k.encode('ascii') + b':' + b'\r\n\t'.join(val))
     hstring = b''.join(_buffer).decode('iso-8859-1')
-    res.msg = res.headers = email.parser.Parser(
-        _class=http_client.HTTPMessage).parsestr(hstring)
+    if is_python_version_at_least("3.0"):
+      res.msg = res.headers = email.parser.Parser(
+          _class=http_client.HTTPMessage).parsestr(hstring)
+    else:
+      res.msg = http_client.HTTPMessage(StringIO(hstring))
 
     conn.getresponse = lambda: res
     conn.__response = res
