@@ -154,7 +154,7 @@ def initialize(unmock_options):
         for vv in v:
           if hasattr(vv, 'encode'):
             val.append(vv.encode('latin-1'))
-          elif isinstance(one_value, int):
+          elif isinstance(vv, int):
             val.append(str(vv).encode('ascii'))
         _buffer.append(k.encode('ascii') + b':' + b'\r\n\t'.join(val))
       hstring = b''.join(_buffer).decode('iso-8859-1')
