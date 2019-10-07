@@ -19,7 +19,6 @@ class UnmockOptions:
     :type string, list of strings
 
     """
-
     self.replyTo = replyFn if replyFn is not None else (lambda _: dict())
     self.whitelist = whitelist if whitelist is not None else [
         "127.0.0.1", "127.0.0.0", "localhost"]
