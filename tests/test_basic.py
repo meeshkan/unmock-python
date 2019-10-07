@@ -22,7 +22,7 @@ def test_context_manager():
     assert res.text == "Hello bar!"
 
 
-def test_pytest_fixture(unmock):
-  unmock(replyFn=replyFn)
+def test_pytest_fixture(unmock_t):
+  unmock_t(replyFn=replyFn)
   res = requests.get("https://www.example.com/?name=baz")
   assert res.text == "Hello baz!"
