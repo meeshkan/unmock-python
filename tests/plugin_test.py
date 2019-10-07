@@ -10,10 +10,7 @@ def pytest_wo(cond):
   if os.environ.get("USE_UNMOCK"):  # unmock exists, condition should pass
     assert cond
   else:
-    # unmock does not exist, condition should fail "silently"
-    with pytest.raises(Exception):
-      # this is done intentionally so catching build errors is easier
-      assert cond
+    assert not cond
 
 
 def test_pytest_flag():
