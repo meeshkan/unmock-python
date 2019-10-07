@@ -5,7 +5,8 @@ import requests
 def replyFn(request):
   if request.host == "www.example.com":
     name = request.qs["name"] or ["World"]
-    return {"content": "Hello {}!".format(name[0]), "status": 200}
+    s = "Hello {}!".format(name[0])
+    return {"content": s, "status": 200, "headers": {"Content-Length": len(s)}}
   return {"status": 400}
 
 

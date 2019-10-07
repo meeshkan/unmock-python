@@ -23,7 +23,7 @@ class MockSocket(socket.socket):
         'utf-8') if hasattr(content, 'encode') else content)
 
   def makefile(self, *args, **kw):
-    m = mock.Mock()
+    m = mock.MagicMock()
     m.read.return_value = self.content
 
     def readinto(b):
@@ -146,19 +146,24 @@ def initialize(unmock_options):
 
     # Generate the bytes buffer for the msg attribute
     # (mostly copied from httplib)
-    _buffer = []
-    for k, v in reply.get("headers", dict()).items():
-      val = []
-      v = v if isinstance(v, list) else [v]
-      for vv in v:
-        if hasattr(vv, 'encode'):
-          val.append(vv.encode('latin-1'))
-        elif isinstance(one_value, int):
-          val.append(str(vv).encode('ascii'))
-      _buffer.append(k.encode('ascii') + b':' + b'\r\n\t'.join(val))
-    hstring = b''.join(_buffer).decode('iso-8859-1')
-    res.msg = res.headers = email.parser.Parser(
-        _class=http_client.HTTPMessage).parsestr(hstring)
+    if is_python_version_at_least("3.0"):
+      _buffer = []
+      for k, v in reply.get("headers", dict()).items():
+        val = []
+        v = v if isinstance(v, list) else [v]
+        for vv in v:
+          if hasattr(vv, 'encode'):
+            val.append(vv.encode('latin-1'))
+          elif isinstance(one_value, int):
+            val.append(str(vv).encode('ascii'))
+        _buffer.append(k.encode('ascii') + b':' + b'\r\n\t'.join(val))
+      hstring = b''.join(_buffer).decode('iso-8859-1')
+      res.msg = res.headers = email.parser.Parser(
+          _class=http_client.HTTPMessage).parsestr(hstring)
+    else:
+      res.msg = http_client.HTTPMessage(m.io)
+      for k, v in reply.get("headers", dict()).items():
+        res.msg.addheader(k, v)
 
     conn.getresponse = lambda: res
     conn.__response = res
