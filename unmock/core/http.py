@@ -1,5 +1,6 @@
 import os
 from io import BytesIO, StringIO
+import json
 import socket
 import email.parser
 from .utils import PATCHERS, is_python_version_at_least
@@ -131,6 +132,8 @@ def initialize(unmock_options):
 
     reply = unmock_options.replyTo(req)  # Get the reply for this Request
     content = reply.get("content", "")
+    if not isinstance(content, str):
+      content = json.dumps(content)
     m = MockSocket(content)  # MockSocket for HTTPResponse generation
     if is_python_version_at_least("3.0"):
       # method, url were added later on
