@@ -106,12 +106,13 @@ Additionally, one may specify a list of whitelisted hosts/endpoints, for which t
 
 ### Examples
 
+The following example snippet uses the `unmock` fixture (with pytest). The `replyFn` returns either a 200 response for requests to `zodiac.com` or 404 for any other website. For zodiac-requests, it returns a mock for requests to the scorpio horoscope, otherwise it returns an empty response.
+
 ```python
 # horoscope.py
 import requests
 def get_horoscope(sign):
-  res = requests.get("https://zodiac.com/horoscope/{}".format(sign))
-  return res.json()
+  return requests.get("https://zodiac.com/horoscope/{}".format(sign))
 
 # test_horoscope.py
 from horoscope import get_horoscope
@@ -120,7 +121,15 @@ def replyFn(req):
   if "zodiac.com" in req.host:
     sign = req.endpoint.split("/")[-1]
     if sign.lower() == "scorpio":
-      return {"content": {""} }
+      return {"content": {"horoscope": "You will be lucky! Someday..."}, "status": 200 }
+    return {"status": 200}
+  return {"status": 404}
+
+def test_horoscope(unmock):
+  unmock(replyFn=replyFn)
+  res = get_horoscope("scorpio")
+  assert res.status_code == 200
+  assert res.json().get("horoscope") == "You will be lucky! Someday..."
 ```
 
 ### unmock.io
