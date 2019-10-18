@@ -65,6 +65,7 @@ def replyFn(request):
   if request.host == "www.example.com":
     name = request.qs.get("name", ["World"])
     s = "Hello {}!".format(name[0])
+    # return value should be a dictionary with keys `content` (body), `status`, and `headers`
     return {"content": s, "status": 200, "headers": {"Content-Length": len(s)}}
   return {"status": 400}
 
