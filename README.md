@@ -53,6 +53,30 @@ $ pip install unmock
 
 ## Usage
 
+### Quick Start
+
+```python
+import unmock
+import requests
+
+# Determine the reply callback
+def replyFn(request):
+  # `request` is a dictionary with keys like `host`, `qs`, etc.
+  if request.host == "www.example.com":
+    name = request.qs.get("name", ["World"])
+    s = "Hello {}!".format(name[0])
+    return {"content": s, "status": 200, "headers": {"Content-Length": len(s)}}
+  return {"status": 400}
+
+# Activate unmock to start intercepting requests
+unmock.on(replyFn=replyFn)
+res = requests.get("https://www.example.com/?name=foo")
+assert res.text == "Hello foo!"
+assert res.headers.get("Content-Length") == str(len("Hello foo!"))
+# Disable interception
+unmock.off()
+```
+
 ### Tests
 
 <!-- Write about:
