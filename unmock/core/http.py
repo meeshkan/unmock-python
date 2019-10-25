@@ -1,5 +1,6 @@
 import os
 from io import BytesIO, StringIO
+import json
 import socket
 import email.parser
 from .utils import PATCHERS, is_python_version_at_least

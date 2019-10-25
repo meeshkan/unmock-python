@@ -1,5 +1,4 @@
 """Named without test_ in the beginning so we can test manually"""
-import pytest
 import requests
 import os
 
