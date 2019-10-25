@@ -42,6 +42,6 @@ class Request:
     self.data = data
 
   def __str__(self):
-    return "{} {}{}:{} {} with body {}".format(
+    return "{} {}{}:{} (headers: {}) with body {}".format(
         self.method, self.host, self.endpoint, self.port, self.headers, self.
         data)
