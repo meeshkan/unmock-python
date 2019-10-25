@@ -45,24 +45,27 @@ def initialize(unmock_options):
   """
 
   def get_response(req):
+    """
+    Generates a response from the given request based on the replyFn in `unmock_options`
+    """
     reply = unmock_options.replyTo(req)  # Get the reply for this Request
     content = reply.get("content", "")
     m = Mocket(content)  # Mocket for HTTPResponse generation
-    if is_python_version_at_least("3.0"):
-      # method, url were added later on
-      res = http_client.HTTPResponse(m, method=req.method, url=req.endpoint)
-    else:
-      res = http_client.HTTPResponse(m)
+    # method, url were added later on
+    res = http_client.HTTPResponse(
+        m, method=req.method, url=req.endpoint) if is_python_version_at_least(
+        "3.0") else http_client.HTTPResponse(m)
 
-    res.chunked = False  # Parameters to keep HTTPResponse at bay while reading the response
+    # Parameters to keep HTTPResponse at bay while reading the response
+    res.chunked = False
     res.length = len(content)
     res.version = 11
     res.status = res.code = reply.get("status", 200)
     res.reason = http_client.responses[res.status]
     res.isclosed = lambda: m.io.closed
 
-    # Generate the bytes buffer for the msg attribute
-    # (mostly copied from httplib)
+    # Generate the bytes buffer for the msg attribute (mostly copied from httplib)
+    # This is basically an encoded headers dictionary
     _buffer = []
     for k, v in reply.get("headers", dict()).items():
       val = []
@@ -83,6 +86,10 @@ def initialize(unmock_options):
     return res
 
   def unmock_urlopen(self, method, url, body=None, headers=None, **kw):
+    """
+    urllib3.urlopen (used in requests library as well). Requires a different patch as it creates its own sockets
+    internally.
+    """
     conn = self._get_conn()
     host = conn.host
     port = conn.port
@@ -94,7 +101,8 @@ def initialize(unmock_options):
     req.add_body(body)
     res = get_response(req)
 
-    # In the process from creating the urllib response, the data is flushed
+    # In the process of creating the urllib response from HTTPResponse, the data is flushed (?)
+    # TODO this could be an internal error - potentially a hack :shrug:
     contentValue = res.fp.getvalue()
     res = self.ResponseCls.from_httplib(res)  # So we reassign it here
     res._fp = BytesIO(contentValue)
@@ -189,8 +197,6 @@ def initialize(unmock_options):
     conn.__state = http_client._CS_REQ_SENT
 
   # Create the patchers and mock away!
-  # original_putrequest = PATCHERS.patch(
-  #     "six.moves.http_client.HTTPConnection.connect", unmock_connect)
   original_putrequest = PATCHERS.patch(
       "six.moves.http_client.HTTPConnection.putrequest", unmock_putrequest)
   original_putheader = PATCHERS.patch(
@@ -198,7 +204,7 @@ def initialize(unmock_options):
   original_endheaders = PATCHERS.patch(
       "six.moves.http_client.HTTPConnection.endheaders", unmock_end_headers)
 
-  # TODO: do we need to also mock within requests? -> requests.packages.urllib3.connectionpool.HTTPConnectionPool.urlopen
+  # We probably do not need to patch the requests module, but in case we do, it's here -> requests.packages.urllib3.connectionpool.HTTPConnectionPool.urlopen
   if has_urllib3:
     original_urlopen = PATCHERS.patch(
         "urllib3.connectionpool.HTTPConnectionPool.urlopen", unmock_urlopen)
