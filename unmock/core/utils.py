@@ -52,12 +52,14 @@ class Patchers:
   def start(self):
     """Starts all registered patchers"""
     for patcher in self.patchers:
-      patcher.start()
+      if getattr(patcher, 'target', None) is None:
+        patcher.start()
 
   def stop(self):
     """Stops all registered patchers"""
     for patcher in self.patchers:
-      patcher.stop()
+      if getattr(patcher, 'target', None) is not None:
+        patcher.stop()
 
 
 def parse_url(url):
