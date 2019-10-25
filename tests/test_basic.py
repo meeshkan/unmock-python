@@ -1,5 +1,6 @@
 import unmock
 import requests
+import json
 
 
 def replyFn(request):
@@ -8,7 +9,7 @@ def replyFn(request):
     name = request.qs.get("name", ["World"])
     s = "Hello {}!".format(name[0])
     return {"content": s, "status": 200, "headers": {"Content-Length": len(s)}}
-  return {"status": 204, "content": {"foo": "bar"}}
+  return {"status": 204, "content": json.dumps({"foo": "bar"})}
 
 
 def test_reply_fn():
